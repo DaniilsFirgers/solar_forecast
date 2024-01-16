@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from sklearn.preprocessing import MinMaxScaler
-from config.database import DB_NAME, COLLECTION_NAME
+from config.database import PRODUCTION_HISTORY_DB_NAME, PRODUCTION_HISTORY_COLLECTION_NAME
 from database.main import mongo_handler
 from data.transform import CustomDataset
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ filter_query = {
 }
 
 historical_data = mongo_handler.retrieve_data(
-    DB_NAME, COLLECTION_NAME, filter_query)
+    PRODUCTION_HISTORY_DB_NAME, PRODUCTION_HISTORY_COLLECTION_NAME, filter_query)
 
 # Assuming consumption_values is a list of consumption values from historical_data
 consumption_values = [entry.get('consumption') for entry in historical_data]

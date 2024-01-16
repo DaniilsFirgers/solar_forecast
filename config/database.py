@@ -6,8 +6,8 @@ MONGO_USERNAME = None
 MONGO_PASSWORD = None
 
 
-DB_NAME = 'customer_management'
-COLLECTION_NAME = 'power_meter_history'
+PRODUCTION_HISTORY_DB_NAME = 'customer_management'
+PRODUCTION_HISTORY_COLLECTION_NAME = 'power_meter_history'
 
 
 @dataclasses.dataclass
