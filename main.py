@@ -22,7 +22,7 @@ historical_data = mongo_handler.retrieve_data(
     PRODUCTION_HISTORY_DB_NAME, PRODUCTION_HISTORY_COLLECTION_NAME, filter_query)
 
 # Assuming consumption_values is a list of consumption values from historical_data
-consumption_values = [entry.get('consumption') for entry in historical_data]
+consumption_values = [entry.get('production') for entry in historical_data]
 
 # Prepare sequences for training
 X, y = [], []
