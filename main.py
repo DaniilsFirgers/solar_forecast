@@ -20,30 +20,35 @@ filter_query = {
 
 historical_data = mongo_handler.retrieve_data(
     PRODUCTION_HISTORY_DB_NAME, PRODUCTION_HISTORY_COLLECTION_NAME, filter_query)
+if historical_data is None:
+    print("Error retrieving data from MongoDB.")
+    exit(1)
 
-# Assuming consumption_values is a list of consumption values from historical_data
-consumption_values = [entry.get('production') for entry in historical_data]
+scaler = MinMaxScaler()
+scaler.fit_transform(historical_data[["production"]])
 
 # Prepare sequences for training
 X, y = [], []
-for i in range(len(consumption_values) - window):
-    X.append(consumption_values[i:i + window])
-    y.append(consumption_values[i + window])
-
+for i in range(len(historical_data) - window):
+    X.append(historical_data.iloc[i:i + window].values)
+    y.append(historical_data[i + window:i + window + 1]["production"].values)
 X = np.stack(X)
 y = np.stack(y)
+
 
 # Split data into train and test sets
 train_size = int(SPLIT_RATIO * len(X))
 train_data, test_data = X[:train_size], X[train_size:]
+print(f"Train data shape: {train_data}")
+print(f"Test data shape: {test_data}")
 
 # Create instances of your custom dataset
-train_dataset = CustomDataset(train_data)
-test_dataset = CustomDataset(test_data)
+# train_dataset = CustomDataset(train_data)
+# test_dataset = CustomDataset(test_data)
 
 # Create instances of DataLoader
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
+train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=False)
 
 model = nn.Sequential(
     # Adjust input size based on your sequence length

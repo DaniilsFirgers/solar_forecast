@@ -1,10 +1,9 @@
 import dataclasses
 import datetime as dt
-from typing import Any, Dict
 import numpy as np
+from pandas import DataFrame
 from sklearn.preprocessing import MinMaxScaler
 from torchvision import transforms
-import torch
 from torch.utils.data import Dataset
 
 
@@ -27,17 +26,13 @@ class Datapoint:
 
 
 class CustomDataset(Dataset):
-    def __init__(self, data: np.ndarray[Any, np.dtype]):
+    def __init__(self, data: DataFrame):
         self.data = data
-        # Use scikit-learn MinMaxScaler
         self.scaler_consumption = MinMaxScaler()
-        self.scaler_consumption.fit(self.data)
+        self.scaler_consumption.fit_transform(self.data)
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-
-        consumption_value = self.scaler_consumption.transform(
-            [self.data[idx].flatten()])
-        return np.squeeze(consumption_value)
+        return self.data[idx]

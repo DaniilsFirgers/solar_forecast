@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from config.database import DbConfig, MONGO_DB_HOST, MONGO_DB_PORT, MONGO_USERNAME, MONGO_PASSWORD
 from data.transform import Datapoint
+import pandas as pd
 
 
 class MongoDBHandler:
@@ -27,7 +28,9 @@ class MongoDBHandler:
             result: list[Datapoint] = collection.find(filter_query)
             formatted_result = [Datapoint(**datapoint).to_object()
                                 for datapoint in result]
-            return list(formatted_result)
+            df = pd.DataFrame(formatted_result).sort_values("start_time")
+            df.set_index("start_time", inplace=True)
+            return df
         except Exception as e:
             print(f"Error retrieving data from MongoDB: {e}")
 
