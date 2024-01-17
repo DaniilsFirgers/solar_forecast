@@ -22,7 +22,7 @@ class Datapoint:
     def to_object(self):
         return {
             "start_time": self.start_time,
-            "consumption": self.production,
+            "production": self.production,
         }
 
 
