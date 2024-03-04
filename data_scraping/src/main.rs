@@ -1,3 +1,3 @@
 fn main() {
-    println!("Hello, world!");
+    data_scraping::run();
 }
