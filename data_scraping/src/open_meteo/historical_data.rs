@@ -49,9 +49,9 @@ pub struct HourlyUnits {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HourlyData {
     pub time: Vec<String>,
-    #[serde(rename = "temperature")]
+    // #[serde(rename = "temperature")]
     pub temperature_2m: Vec<f64>,
-    #[serde(rename = "relative_humidity")]
+    // #[serde(rename = "relative_humidity")]
     pub relative_humidity_2m: Vec<i64>,
     pub precipitation: Vec<f64>,
     pub rain: Vec<f64>,
