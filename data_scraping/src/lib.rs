@@ -5,6 +5,7 @@ use tokio::runtime;
 
 use lazy_static::lazy_static;
 pub mod open_meteo;
+use open_meteo::channel::CHANNEL;
 use open_meteo::historical_data::RequestHandler as forecast_fetcher;
 
 lazy_static! {
@@ -31,6 +32,15 @@ pub fn run() {
         let result = forecast_fetcher::run(&mut example).await;
         if let Err(e) = result {
             error!("Error running weather scraper {:?}", e);
+        }
+    });
+
+    TOKIO_RT.spawn(async move {
+        let receiver_wrapper = CHANNEL.document_receiver();
+        let mut receiver = receiver_wrapper.lock().await;
+        while let Some(data) = receiver.recv().await {
+            // Process the received data here
+            println!("Received data: {:#?} length", data.len());
         }
     });
 

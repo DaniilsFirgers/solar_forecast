@@ -1,7 +1,13 @@
-use log::info;
+use bson::Document;
+use log::{error, info};
+use mongodb::bson;
 use reqwest::Error as ReqErr;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use tokio::sync::mpsc;
+
+use super::channel::CHANNEL;
+use super::document::FormattedWeatherData;
 
 const BASE_URL: &str = "https://archive-api.open-meteo.com/v1/archive";
 const FEATURES: &str = "&hourly=temperature_2m,relative_humidity_2m,precipitation,rain,surface_pressure,wind_speed_10m,direct_radiation";
@@ -11,6 +17,7 @@ pub struct RequestHandler {
     pub longitude: String,
     pub start_date: String,
     pub end_date: String,
+    sender: mpsc::UnboundedSender<Vec<Document>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -62,11 +69,13 @@ pub struct HourlyData {
 
 impl RequestHandler {
     pub fn new(latitude: String, longitude: String, start_date: String, end_date: String) -> Self {
+        let sender = CHANNEL.document_sender();
         Self {
             latitude,
             longitude,
             start_date,
             end_date,
+            sender,
         }
     }
     pub async fn run(&mut self) -> Result<(), Box<dyn Error>> {
@@ -90,9 +99,53 @@ impl RequestHandler {
     }
     async fn get_data(&self, url: String) -> Result<(), ReqErr> {
         let client = reqwest::Client::new();
-        let response: HistoricalWeatherForecast = client.get(&url).send().await?.json().await?;
+        let mut response: HistoricalWeatherForecast = client.get(&url).send().await?.json().await?;
 
-        println!("Deserialized data: {:?}", response);
+        self.format_response(&mut response);
         Ok(())
+    }
+    fn format_response(&self, response: &mut HistoricalWeatherForecast) {
+        let data_len = response.hourly.time.len();
+        let mut data_vec: Vec<Document> = Vec::with_capacity(data_len);
+
+        for i in 0..data_len {
+            if let (
+                Some(datetime),
+                Some(temperature),
+                Some(relative_humidity),
+                Some(precipitation),
+                Some(rain),
+                Some(surface_pressure),
+                Some(wind_speed),
+                Some(direct_radiation),
+            ) = (
+                response.hourly.time.get(i),
+                response.hourly.temperature_2m.get(i),
+                response.hourly.relative_humidity_2m.get(i),
+                response.hourly.precipitation.get(i),
+                response.hourly.rain.get(i),
+                response.hourly.surface_pressure.get(i),
+                response.hourly.wind_speed_10m.get(i),
+                response.hourly.direct_radiation.get(i),
+            ) {
+                let formatted_data = FormattedWeatherData::new(
+                    datetime,
+                    temperature,
+                    relative_humidity,
+                    precipitation,
+                    rain,
+                    surface_pressure,
+                    wind_speed,
+                    direct_radiation,
+                );
+                let mongo_doc: Document = formatted_data.into();
+                data_vec.push(mongo_doc);
+            } else {
+                error!("Missing data for index {i}");
+            }
+        }
+        if let Err(e) = self.sender.send(data_vec.clone()) {
+            error!("Could not send mongo documents to receiver: {e}");
+        };
     }
 }

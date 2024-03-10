@@ -6,9 +6,11 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = "0.4.34"
 env_logger = "0.11.3"
 lazy_static = "1.4.0"
 log = "0.4.21"
+mongodb = {version = "2.8.0", features = ["bson-chrono-0_4"]}
 reqwest = {version = "0.11.24", features = ["json"]}
 serde = {version = "1.0.197", features = ["derive"]}
 tokio = {version = "1.35.1", features = ["full", "sync", "tracing"]}
