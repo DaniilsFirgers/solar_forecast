@@ -1,5 +1,7 @@
 pub mod logger;
-use log::error;
+use log::{error, info};
+use open_meteo::database::MongoDb;
+use std::f32::consts::E;
 use std::{sync::Arc, thread, time};
 use tokio::runtime;
 
@@ -36,11 +38,23 @@ pub fn run() {
     });
 
     TOKIO_RT.spawn(async move {
+        let mongodb_result = MongoDb::new().await;
+        let mongodb_res: MongoDb = match mongodb_result {
+            Ok(db) => db,
+            Err(_) => panic!("Error with mongo db!!"),
+        };
+
         let receiver_wrapper = CHANNEL.document_receiver();
         let mut receiver = receiver_wrapper.lock().await;
         while let Some(data) = receiver.recv().await {
             // Process the received data here
             println!("Received data: {:#?} length", data.len());
+            let doc_count = mongodb_res.upsert_record(data).await;
+            if let Ok(doc_count) = doc_count {
+                info!("Upserted: {} docs", doc_count.len());
+            } else {
+                error!("Error while updating docs");
+            }
         }
     });
 
