@@ -1,6 +1,6 @@
 pub mod logger;
 use log::{error, info};
-use open_meteo::database::MongoDb;
+use open_meteo::database::{MongoDb, MONGODB_INSTANCE};
 use std::f32::consts::E;
 use std::{sync::Arc, thread, time};
 use tokio::runtime;
@@ -22,36 +22,31 @@ lazy_static! {
 
 pub fn run() {
     logger::init_logger();
-
     let mut example = forecast_fetcher::new(
         "52.52".to_string(),
         "13.41".to_string(),
         "2024-02-18".to_string(), // Start date
         "2024-03-03".to_string(),
+        Arc::clone(&MONGODB_INSTANCE),
     );
 
     TOKIO_RT.spawn(async move {
-        let result = forecast_fetcher::run(&mut example).await;
-        if let Err(e) = result {
-            error!("Error running weather scraper {:?}", e);
-        }
+        let _ = forecast_fetcher::run(&mut example).await;
+        // if let Err(e) = result {
+        //     error!("Error running weather scraper {:?}", e);
+        // }
     });
 
     TOKIO_RT.spawn(async move {
-        let mongodb_result = MongoDb::new().await;
-        let mongodb_res: MongoDb = match mongodb_result {
-            Ok(db) => db,
-            Err(_) => panic!("Error with mongo db!!"),
-        };
-
         let receiver_wrapper = CHANNEL.document_receiver();
         let mut receiver = receiver_wrapper.lock().await;
+        let mongo_db_guard = &*MONGODB_INSTANCE.lock().await;
+
         while let Some(data) = receiver.recv().await {
             // Process the received data here
-            println!("Received data: {:#?} length", data.len());
-            let doc_count = mongodb_res.upsert_record(data).await;
-            if let Ok(doc_count) = doc_count {
-                info!("Upserted: {} docs", doc_count.len());
+            let doc_count = mongo_db_guard.upsert_record(data).await;
+            if let Ok(docs) = doc_count {
+                info!("Upserted: {} docs.", docs.len(),);
             } else {
                 error!("Error while updating docs");
             }

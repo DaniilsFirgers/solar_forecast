@@ -4,20 +4,24 @@ use mongodb::bson;
 use reqwest::Error as ReqErr;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+use std::sync::Arc;
 use tokio::sync::mpsc;
+use tokio::sync::Mutex;
 
 use super::channel::CHANNEL;
+use super::database::MongoDb;
 use super::document::FormattedWeatherData;
 
 const BASE_URL: &str = "https://archive-api.open-meteo.com/v1/archive";
 const FEATURES: &str = "&hourly=temperature_2m,relative_humidity_2m,precipitation,rain,surface_pressure,wind_speed_10m,direct_radiation";
-
+static NONE_STRING: &str = "None";
 pub struct RequestHandler {
     pub latitude: String,
     pub longitude: String,
     pub start_date: String,
     pub end_date: String,
     sender: mpsc::UnboundedSender<Vec<Document>>,
+    mongo_db: Arc<Mutex<MongoDb>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -68,14 +72,22 @@ pub struct HourlyData {
 }
 
 impl RequestHandler {
-    pub fn new(latitude: String, longitude: String, start_date: String, end_date: String) -> Self {
+    pub fn new(
+        latitude: String,
+        longitude: String,
+        start_date: String,
+        end_date: String,
+        mongo_client: Arc<Mutex<MongoDb>>,
+    ) -> Self {
         let sender = CHANNEL.document_sender();
+
         Self {
             latitude,
             longitude,
             start_date,
             end_date,
             sender,
+            mongo_db: mongo_client,
         }
     }
     pub async fn run(&mut self) -> Result<(), Box<dyn Error>> {
@@ -85,6 +97,13 @@ impl RequestHandler {
     }
 
     async fn handle_data_gathering(&mut self) -> Result<(), ReqErr> {
+        let mongo_guard = &*self.mongo_db.lock().await;
+        let res = mongo_guard
+            .get_latest_object_doc(self.longitude.clone(), self.latitude.clone())
+            .await
+            .unwrap();
+        println!("res: {:?}", res);
+
         let url = self.create_url();
         self.get_data(url).await?;
         Ok(())
@@ -107,6 +126,17 @@ impl RequestHandler {
     fn format_response(&self, response: &mut HistoricalWeatherForecast) {
         let data_len = response.hourly.time.len();
         let mut data_vec: Vec<Document> = Vec::with_capacity(data_len);
+        let none_string = String::from("None");
+        let start = response.hourly.time.get(0).unwrap_or(&none_string);
+        let end = response
+            .hourly
+            .time
+            .get(data_len - 1)
+            .unwrap_or(&none_string);
+        info!(
+            "Scraping weather data for the period from: {} to {}",
+            start, end
+        );
 
         for i in 0..data_len {
             if let (
@@ -129,14 +159,14 @@ impl RequestHandler {
                 response.hourly.direct_radiation.get(i),
             ) {
                 let formatted_data = FormattedWeatherData::new(
-                    datetime,
-                    temperature,
-                    relative_humidity,
-                    precipitation,
-                    rain,
-                    surface_pressure,
-                    wind_speed,
-                    direct_radiation,
+                    datetime.to_string(),
+                    *temperature,
+                    *relative_humidity,
+                    *precipitation,
+                    *rain,
+                    *surface_pressure,
+                    *wind_speed,
+                    *direct_radiation,
                 );
                 let mongo_doc: Document = formatted_data.into();
                 data_vec.push(mongo_doc);

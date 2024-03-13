@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 from config.database import DbConfig, MONGO_DB_HOST, MONGO_DB_PORT, MONGO_USERNAME, MONGO_PASSWORD
-from data.transform import Datapoint
+from data_handling.transform import Datapoint
 import pandas as pd
 
 
