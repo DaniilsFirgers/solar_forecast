@@ -1,8 +1,15 @@
 use bson::Document;
+use chrono::DateTime;
+use chrono::Duration;
+use chrono::NaiveDateTime;
+use chrono::ParseError;
+use chrono::Timelike;
+use chrono::Utc;
 use log::{error, info};
 use mongodb::bson;
 use reqwest::Error as ReqErr;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -14,14 +21,18 @@ use super::document::FormattedWeatherData;
 
 const BASE_URL: &str = "https://archive-api.open-meteo.com/v1/archive";
 const FEATURES: &str = "&hourly=temperature_2m,relative_humidity_2m,precipitation,rain,surface_pressure,wind_speed_10m,direct_radiation";
-static NONE_STRING: &str = "None";
+
+#[derive(Debug, Clone)]
+struct Coordinates {
+    lon: String,
+    lat: String,
+}
+
+#[derive(Clone)]
 pub struct RequestHandler {
-    pub latitude: String,
-    pub longitude: String,
-    pub start_date: String,
-    pub end_date: String,
     sender: mpsc::UnboundedSender<Vec<Document>>,
     mongo_db: Arc<Mutex<MongoDb>>,
+    locations: HashMap<String, Coordinates>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -72,58 +83,128 @@ pub struct HourlyData {
 }
 
 impl RequestHandler {
-    pub fn new(
-        latitude: String,
-        longitude: String,
-        start_date: String,
-        end_date: String,
-        mongo_client: Arc<Mutex<MongoDb>>,
-    ) -> Self {
+    pub fn new(mongo_client: Arc<Mutex<MongoDb>>) -> Self {
         let sender = CHANNEL.document_sender();
 
+        let mut locations: HashMap<String, Coordinates> = HashMap::new();
+        locations.insert(
+            String::from("A"),
+            Coordinates {
+                lat: String::from("57.38944"),
+                lon: String::from("21.56056"),
+            },
+        );
+        locations.insert(
+            String::from("B"),
+            Coordinates {
+                lon: String::from("56.946"),
+                lat: String::from("24.10589"),
+            },
+        );
+
         Self {
-            latitude,
-            longitude,
-            start_date,
-            end_date,
             sender,
             mongo_db: mongo_client,
+            locations,
         }
     }
     pub async fn run(&mut self) -> Result<(), Box<dyn Error>> {
         info!("Historical weather forecast scraper started!");
-        self.handle_data_gathering().await?;
+
+        let mut locations = self.locations.clone();
+        for location in &mut locations {
+            info!("Scraping historical weather data for {}", location.0);
+            match self.handle_data_gathering(&location).await {
+                Ok(_) => (),
+                Err(e) => {
+                    error!(
+                        "Error while data gathering for object {} - {}",
+                        location.0, e
+                    );
+                }
+            };
+        }
+
         Ok(())
     }
 
-    async fn handle_data_gathering(&mut self) -> Result<(), ReqErr> {
-        let mongo_guard = &*self.mongo_db.lock().await;
-        let res = mongo_guard
-            .get_latest_object_doc(self.longitude.clone(), self.latitude.clone())
-            .await
-            .unwrap();
-        println!("res: {:?}", res);
+    fn get_end_date(&self) -> DateTime<Utc> {
+        let mut utc_now: DateTime<Utc> = Utc::now();
+        utc_now = utc_now.with_minute(0).unwrap().with_second(0).unwrap();
+        let two_days_ago = utc_now - Duration::try_days(8).unwrap();
 
-        let url = self.create_url();
-        self.get_data(url).await?;
+        two_days_ago
+    }
+
+    fn parse_datetime_to_utc(&self, datetime: String) -> Result<DateTime<Utc>, ParseError> {
+        println!("{}", datetime);
+        let parsed_start_time = match NaiveDateTime::parse_from_str(&datetime, "%Y-%m-%dT%H:%M") {
+            Ok(dt) => dt,
+            Err(e) => return Err(e),
+        };
+
+        let utc_start_time = parsed_start_time.and_utc();
+        Ok(utc_start_time)
+    }
+
+    async fn handle_data_gathering(
+        &mut self,
+        coordinates: &(&String, &mut Coordinates),
+    ) -> Result<(), Box<dyn Error>> {
+        let end_date = self.get_end_date();
+        // TODO: use a default datetiem string here
+        let mut start_date = self.parse_datetime_to_utc(String::from("2023-01-01T00:00"))?;
+        let mongo_db = Arc::clone(&self.mongo_db);
+        let mongo_guard = mongo_db.lock().await;
+        if let Ok(res) = mongo_guard.get_latest_object_doc(&coordinates.0).await {
+            start_date = self.parse_datetime_to_utc(res.datetime)?;
+        } else {
+            println!("No document found, starting from {}", start_date);
+        }
+
+        while start_date < end_date {
+            let intermmediate_end = start_date + Duration::try_weeks(1).unwrap();
+            let url = self.create_url(start_date, intermmediate_end, coordinates.1);
+            self.get_data(url, &coordinates).await?;
+
+            // Add one week to start_date
+            start_date = intermmediate_end;
+        }
+
         Ok(())
     }
 
-    fn create_url(&self) -> String {
+    fn create_url(
+        &self,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+        coordinates: &Coordinates,
+    ) -> String {
+        let start_date = start.format("%Y-%m-%d").to_string();
+        let end_date = end.format("%Y-%m-%d").to_string();
+
         let url = format!(
             "{}?latitude={}&longitude={}&start_date={}&end_date={}&{}",
-            &BASE_URL, self.latitude, self.longitude, self.start_date, self.end_date, FEATURES
+            &BASE_URL, coordinates.lat, coordinates.lon, start_date, end_date, FEATURES
         );
         url
     }
-    async fn get_data(&self, url: String) -> Result<(), ReqErr> {
+    async fn get_data(
+        &self,
+        url: String,
+        coordinates: &(&String, &mut Coordinates),
+    ) -> Result<(), ReqErr> {
         let client = reqwest::Client::new();
         let mut response: HistoricalWeatherForecast = client.get(&url).send().await?.json().await?;
 
-        self.format_response(&mut response);
+        self.format_response(&mut response, coordinates);
         Ok(())
     }
-    fn format_response(&self, response: &mut HistoricalWeatherForecast) {
+    fn format_response(
+        &self,
+        response: &mut HistoricalWeatherForecast,
+        coordinates: &(&String, &mut Coordinates),
+    ) {
         let data_len = response.hourly.time.len();
         let mut data_vec: Vec<Document> = Vec::with_capacity(data_len);
         let none_string = String::from("None");
@@ -167,6 +248,7 @@ impl RequestHandler {
                     *surface_pressure,
                     *wind_speed,
                     *direct_radiation,
+                    coordinates.0.clone(),
                 );
                 let mongo_doc: Document = formatted_data.into();
                 data_vec.push(mongo_doc);

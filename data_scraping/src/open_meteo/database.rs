@@ -1,9 +1,9 @@
 use mongodb::{
-    bson::{doc, Bson, Document},
+    bson::{doc, Document},
     error::Error,
     options::FindOneOptions,
     results::UpdateResult,
-    Client, Collection, Database,
+    Client, Collection, Database, IndexModel,
 };
 use std::{error::Error as StdError, sync::Arc};
 use tokio::sync::Mutex;
@@ -37,6 +37,17 @@ impl MongoDb {
         let client = Client::with_uri_str("mongodb://localhost:27017").await?;
         let db = client.database("forecast");
         let collection = db.collection("weather_data");
+
+        let datetime_index_model = IndexModel::builder().keys(doc! { "datetime": 1 }).build();
+
+        let object_name_index_model = IndexModel::builder()
+            .keys(doc! { "object_name": 1 })
+            .build();
+
+        collection.create_index(datetime_index_model, None).await?;
+        collection
+            .create_index(object_name_index_model, None)
+            .await?;
         Ok(Self {
             client,
             db,
@@ -46,18 +57,15 @@ impl MongoDb {
 
     pub async fn get_latest_object_doc(
         &self,
-        lon: String,
-        lat: String,
+        object_name: &String,
     ) -> Result<FormattedWeatherData, Box<dyn StdError>> {
         let filter = doc! {
-            "lon": lon,
-            "lat": lat,
+            "object_name": object_name
         };
 
         let options = FindOneOptions::builder()
             .sort(doc! { "datetime": -1 })
             .build();
-
         let latest_doc = match self.collection.find_one(filter, options).await {
             Ok(Some(doc)) => doc,
             Ok(None) => {
@@ -65,7 +73,9 @@ impl MongoDb {
                     std::io::Error::new(std::io::ErrorKind::NotFound, "No document was found");
                 return Err(Box::new(err));
             }
-            Err(err) => return Err(Box::new(err)),
+            Err(err) => {
+                return Err(Box::new(err));
+            }
         };
 
         let doc_to_value: Result<FormattedWeatherData, ConversionError> = latest_doc.try_into();
@@ -77,8 +87,10 @@ impl MongoDb {
         let mut results = Vec::new();
 
         for document in data {
-            if let Some(datetime) = document.get("datetime") {
-                let filter = doc! {"datetime": datetime};
+            if let (Some(datetime), Some(object_name)) =
+                ((document.get("datetime")), (document.get("object_name")))
+            {
+                let filter = doc! {"datetime": datetime, "object_name": object_name};
 
                 let result = self
                     .collection

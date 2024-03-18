@@ -13,6 +13,7 @@ pub struct FormattedWeatherData {
     pub pressure: f64,
     pub wind_speed: f64,
     pub direct_radiation: f64,
+    pub object_name: String,
 }
 
 impl FormattedWeatherData {
@@ -25,6 +26,7 @@ impl FormattedWeatherData {
         pressure: f64,
         wind_speed: f64,
         direct_radiation: f64,
+        object_name: String,
     ) -> Self {
         Self {
             datetime,
@@ -35,6 +37,7 @@ impl FormattedWeatherData {
             pressure,
             wind_speed,
             direct_radiation,
+            object_name,
         }
     }
 }
@@ -50,6 +53,7 @@ impl Into<Document> for FormattedWeatherData {
             "pressure": self.pressure,
             "wind_speed": self.wind_speed,
             "direct_radiation": self.direct_radiation,
+            "object_name": self.object_name
         }
     }
 }
@@ -121,7 +125,10 @@ impl TryInto<FormattedWeatherData> for Document {
                 ))
             }
         };
-
+        let object_name: String = match self.get_str("object_name") {
+            Ok(object_name) => object_name.into(),
+            Err(_) => return Err(ConversionError::MissingField("lat".to_string())),
+        };
         Ok(FormattedWeatherData {
             datetime,
             temperature,
@@ -131,6 +138,7 @@ impl TryInto<FormattedWeatherData> for Document {
             pressure,
             wind_speed,
             direct_radiation,
+            object_name,
         })
     }
 }
