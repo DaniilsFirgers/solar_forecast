@@ -90,15 +90,23 @@ impl RequestHandler {
         locations.insert(
             String::from("A"),
             Coordinates {
-                lat: String::from("57.38944"),
-                lon: String::from("21.56056"),
+                lat: String::from("56.46601"),
+                lon: String::from("22.91722"),
             },
         );
         locations.insert(
             String::from("B"),
             Coordinates {
-                lon: String::from("56.946"),
-                lat: String::from("24.10589"),
+                lon: String::from("56.722988"),
+                lat: String::from("21.575005"),
+            },
+        );
+
+        locations.insert(
+            String::from("C"),
+            Coordinates {
+                lon: String::from("57.216143"),
+                lat: String::from("22.523923"),
             },
         );
 
