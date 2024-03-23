@@ -165,7 +165,7 @@ impl RequestHandler {
         let mongo_db = Arc::clone(&self.mongo_db);
         let mongo_guard = mongo_db.lock().await;
         if let Ok(res) = mongo_guard.get_latest_object_doc(&coordinates.0).await {
-            start_date = self.parse_datetime_to_utc(res.datetime)?;
+            start_date = self.parse_datetime_to_utc(res.start_time)?;
         } else {
             println!("No document found, starting from {}", start_date);
         }

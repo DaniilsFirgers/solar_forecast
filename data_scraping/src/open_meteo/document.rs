@@ -5,7 +5,7 @@ use mongodb::bson;
 
 #[derive(Debug, Clone)]
 pub struct FormattedWeatherData {
-    pub datetime: String,
+    pub start_time: String,
     pub temperature: f64,
     pub relative_humidity: i64,
     pub precipitation: f64,
@@ -18,7 +18,7 @@ pub struct FormattedWeatherData {
 
 impl FormattedWeatherData {
     pub fn new(
-        datetime: String,
+        start_time: String,
         temperature: f64,
         relative_humidity: i64,
         precipitation: f64,
@@ -29,7 +29,7 @@ impl FormattedWeatherData {
         object_name: String,
     ) -> Self {
         Self {
-            datetime,
+            start_time,
             temperature,
             relative_humidity,
             precipitation,
@@ -45,7 +45,7 @@ impl FormattedWeatherData {
 impl Into<Document> for FormattedWeatherData {
     fn into(self) -> Document {
         doc! {
-            "datetime": self.datetime,
+            "start_time": self.start_time,
             "temperature": self.temperature,
             "relative_humidity": self.relative_humidity,
             "precipitation": self.precipitation,
@@ -78,9 +78,9 @@ impl TryInto<FormattedWeatherData> for Document {
     type Error = ConversionError;
 
     fn try_into(self) -> Result<FormattedWeatherData, Self::Error> {
-        let datetime = match self.get_str("datetime") {
-            Ok(datetime) => datetime.to_string(),
-            Err(_) => return Err(ConversionError::MissingField("datetime".to_string())),
+        let start_time = match self.get_str("start_time") {
+            Ok(start_time) => start_time.to_string(),
+            Err(_) => return Err(ConversionError::MissingField("start_time".to_string())),
         };
 
         let temperature = match self.get_f64("temperature") {
@@ -130,7 +130,7 @@ impl TryInto<FormattedWeatherData> for Document {
             Err(_) => return Err(ConversionError::MissingField("lat".to_string())),
         };
         Ok(FormattedWeatherData {
-            datetime,
+            start_time,
             temperature,
             relative_humidity,
             precipitation,

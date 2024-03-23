@@ -38,7 +38,7 @@ impl MongoDb {
         let db = client.database("forecast");
         let collection = db.collection("weather_data");
 
-        let datetime_index_model = IndexModel::builder().keys(doc! { "datetime": 1 }).build();
+        let datetime_index_model = IndexModel::builder().keys(doc! { "start_time": 1 }).build();
 
         let object_name_index_model = IndexModel::builder()
             .keys(doc! { "object_name": 1 })
@@ -64,7 +64,7 @@ impl MongoDb {
         };
 
         let options = FindOneOptions::builder()
-            .sort(doc! { "datetime": -1 })
+            .sort(doc! { "start_time": -1 })
             .build();
         let latest_doc = match self.collection.find_one(filter, options).await {
             Ok(Some(doc)) => doc,
@@ -87,10 +87,10 @@ impl MongoDb {
         let mut results = Vec::new();
 
         for document in data {
-            if let (Some(datetime), Some(object_name)) =
-                ((document.get("datetime")), (document.get("object_name")))
+            if let (Some(start_time), Some(object_name)) =
+                ((document.get("start_time")), (document.get("object_name")))
             {
-                let filter = doc! {"datetime": datetime, "object_name": object_name};
+                let filter = doc! {"start_time": start_time, "object_name": object_name};
 
                 let result = self
                     .collection
