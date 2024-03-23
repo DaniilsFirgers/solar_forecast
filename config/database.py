@@ -6,8 +6,9 @@ MONGO_USERNAME = None
 MONGO_PASSWORD = None
 
 
-PRODUCTION_HISTORY_DB_NAME = 'customer_management'
-PRODUCTION_HISTORY_COLLECTION_NAME = 'power_meter_history'
+PRODUCTION_HISTORY_DB_NAME = 'forecast'
+PRODUCTION_HISTORY_COLLECTION_NAME = 'production_history'
+PRODUCTION_WEATHER_COLLECTION_NAME = 'weather_data'
 
 
 @dataclasses.dataclass
