@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 from config.database import DbConfig, MONGO_DB_HOST, MONGO_DB_PORT, MONGO_USERNAME, MONGO_PASSWORD
-from data_handling.transform import Datapoint
+from data_handling.transform import ProductionDataPoint, WeatherDataPoint
 import pandas as pd
 
 
@@ -20,16 +20,28 @@ class MongoDBHandler:
             self.client.close()
             print("Disconnected from MongoDB.")
 
-    def retrieve_data(self, database_name, collection_name, filter_query={}):
+    def retrieve_production_data(self, database_name, collection_name, filter_query={}):
         # Retrieve data from MongoDB with optional filter
         try:
             db = self.client[database_name]
             collection = db[collection_name]
-            result: list[Datapoint] = collection.find(filter_query)
-            formatted_result = [Datapoint(**datapoint).to_object()
+            result: list[ProductionDataPoint] = collection.find(filter_query)
+            formatted_result = [ProductionDataPoint(**datapoint).to_object()
                                 for datapoint in result]
             df = pd.DataFrame(formatted_result).sort_values("start_time")
-            df.set_index("start_time", inplace=True)
+            return df
+        except Exception as e:
+            print(f"Error retrieving data from MongoDB: {e}")
+
+    def retrieve_weather_data(self, database_name, collection_name, filter_query={}):
+        # Retrieve data from MongoDB with optional filter
+        try:
+            db = self.client[database_name]
+            collection = db[collection_name]
+            result: list[WeatherDataPoint] = collection.find(filter_query)
+            formatted_result = [WeatherDataPoint(**datapoint).to_object()
+                                for datapoint in result]
+            df = pd.DataFrame(formatted_result).sort_values("start_time")
             return df
         except Exception as e:
             print(f"Error retrieving data from MongoDB: {e}")
