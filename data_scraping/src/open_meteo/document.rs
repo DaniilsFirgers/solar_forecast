@@ -14,6 +14,13 @@ pub struct FormattedWeatherData {
     pub wind_speed: f64,
     pub direct_radiation: f64,
     pub object_name: String,
+    pub direct_radiation_instant: f64,
+    pub direct_normal_irradiance: f64,
+    pub direct_normal_irradiance_instant: f64,
+    pub shortwave_radiation: f64,
+    pub diffuse_radiation: f64,
+    pub terrestrial_radiation: f64,
+    pub terrestrial_radiation_instant: f64,
 }
 
 impl FormattedWeatherData {
@@ -27,6 +34,13 @@ impl FormattedWeatherData {
         wind_speed: f64,
         direct_radiation: f64,
         object_name: String,
+        direct_radiation_instant: f64,
+        direct_normal_irradiance: f64,
+        direct_normal_irradiance_instant: f64,
+        shortwave_radiation: f64,
+        diffuse_radiation: f64,
+        terrestrial_radiation: f64,
+        terrestrial_radiation_instant: f64,
     ) -> Self {
         Self {
             start_time,
@@ -38,6 +52,13 @@ impl FormattedWeatherData {
             wind_speed,
             direct_radiation,
             object_name,
+            direct_radiation_instant,
+            direct_normal_irradiance,
+            direct_normal_irradiance_instant,
+            shortwave_radiation,
+            diffuse_radiation,
+            terrestrial_radiation,
+            terrestrial_radiation_instant,
         }
     }
 }
@@ -53,7 +74,14 @@ impl Into<Document> for FormattedWeatherData {
             "pressure": self.pressure,
             "wind_speed": self.wind_speed,
             "direct_radiation": self.direct_radiation,
-            "object_name": self.object_name
+            "object_name": self.object_name,
+            "direct_radiation_instant": self.direct_radiation_instant,
+            "direct_normal_irradiance": self.direct_normal_irradiance,
+            "direct_normal_irradiance_instant": self.direct_normal_irradiance_instant,
+            "shortwave_radiation": self.shortwave_radiation,
+            "diffuse_radiation": self.diffuse_radiation,
+            "terrestrial_radiation": self.terrestrial_radiation,
+            "terrestrial_radiation_instant": self.terrestrial_radiation_instant,
         }
     }
 }
@@ -129,6 +157,70 @@ impl TryInto<FormattedWeatherData> for Document {
             Ok(object_name) => object_name.into(),
             Err(_) => return Err(ConversionError::MissingField("lat".to_string())),
         };
+
+        let direct_radiation_instant = match self.get_f64("direct_radiation_instant") {
+            Ok(direct_radiation_instant) => direct_radiation_instant,
+            Err(_) => {
+                return Err(ConversionError::MissingField(
+                    "direct_radiation_instant".to_string(),
+                ))
+            }
+        };
+        let direct_normal_irradiance = match self.get_f64("direct_normal_irradiance") {
+            Ok(direct_normal_irradiance) => direct_normal_irradiance,
+            Err(_) => {
+                return Err(ConversionError::MissingField(
+                    "direct_normal_irradiance".to_string(),
+                ))
+            }
+        };
+
+        let direct_normal_irradiance_instant =
+            match self.get_f64("direct_normal_irradiance_instant") {
+                Ok(direct_normal_irradiance_instant) => direct_normal_irradiance_instant,
+                Err(_) => {
+                    return Err(ConversionError::MissingField(
+                        "direct_normal_irradiance_instant".to_string(),
+                    ))
+                }
+            };
+
+        let shortwave_radiation = match self.get_f64("shortwave_radiation") {
+            Ok(shortwave_radiation) => shortwave_radiation,
+            Err(_) => {
+                return Err(ConversionError::MissingField(
+                    "shortwave_radiation".to_string(),
+                ))
+            }
+        };
+
+        let diffuse_radiation = match self.get_f64("diffuse_radiation") {
+            Ok(diffuse_radiation) => diffuse_radiation,
+            Err(_) => {
+                return Err(ConversionError::MissingField(
+                    "diffuse_radiation".to_string(),
+                ))
+            }
+        };
+
+        let terrestrial_radiation = match self.get_f64("terrestrial_radiation") {
+            Ok(terrestrial_radiation) => terrestrial_radiation,
+            Err(_) => {
+                return Err(ConversionError::MissingField(
+                    "terrestrial_radiation".to_string(),
+                ))
+            }
+        };
+
+        let terrestrial_radiation_instant = match self.get_f64("terrestrial_radiation_instant") {
+            Ok(terrestrial_radiation_instant) => terrestrial_radiation_instant,
+            Err(_) => {
+                return Err(ConversionError::MissingField(
+                    "terrestrial_radiation_instant".to_string(),
+                ))
+            }
+        };
+
         Ok(FormattedWeatherData {
             start_time,
             temperature,
@@ -139,6 +231,13 @@ impl TryInto<FormattedWeatherData> for Document {
             wind_speed,
             direct_radiation,
             object_name,
+            direct_radiation_instant,
+            direct_normal_irradiance,
+            direct_normal_irradiance_instant,
+            shortwave_radiation,
+            diffuse_radiation,
+            terrestrial_radiation,
+            terrestrial_radiation_instant,
         })
     }
 }

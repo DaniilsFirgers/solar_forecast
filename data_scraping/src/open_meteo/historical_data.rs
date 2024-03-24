@@ -20,7 +20,6 @@ use super::database::MongoDb;
 use super::document::FormattedWeatherData;
 
 const BASE_URL: &str = "https://archive-api.open-meteo.com/v1/archive";
-const FEATURES: &str = "&hourly=temperature_2m,relative_humidity_2m,precipitation,rain,surface_pressure,wind_speed_10m,direct_radiation";
 
 #[derive(Debug, Clone)]
 struct Coordinates {
@@ -54,32 +53,39 @@ pub struct HistoricalWeatherForecast {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HourlyUnits {
     pub time: String,
-    // #[serde(rename = "temperature")]
     pub temperature_2m: String,
-    // #[serde(rename = "relative_humidity")]
     pub relative_humidity_2m: String,
     pub precipitation: String,
     pub rain: String,
-    // #[serde(rename = "surface_pressure")]
     pub surface_pressure: String,
-    // #[serde(rename = "wind_speed_10m")]
     pub wind_speed_10m: String,
-    // #[serde(rename = "direct_radiation")]
     pub direct_radiation: String,
+    pub direct_radiation_instant: String,
+    pub direct_normal_irradiance: String,
+    pub direct_normal_irradiance_instant: String,
+    pub shortwave_radiation: String,
+    pub diffuse_radiation: String,
+    pub terrestrial_radiation: String,
+    pub terrestrial_radiation_instant: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HourlyData {
     pub time: Vec<String>,
-    // #[serde(rename = "temperature")]
     pub temperature_2m: Vec<f64>,
-    // #[serde(rename = "relative_humidity")]
     pub relative_humidity_2m: Vec<i64>,
     pub precipitation: Vec<f64>,
     pub rain: Vec<f64>,
     pub surface_pressure: Vec<f64>,
     pub wind_speed_10m: Vec<f64>,
     pub direct_radiation: Vec<f64>,
+    pub direct_radiation_instant: Vec<f64>,
+    pub direct_normal_irradiance: Vec<f64>,
+    pub direct_normal_irradiance_instant: Vec<f64>,
+    pub shortwave_radiation: Vec<f64>,
+    pub diffuse_radiation: Vec<f64>,
+    pub terrestrial_radiation: Vec<f64>,
+    pub terrestrial_radiation_instant: Vec<f64>,
 }
 
 impl RequestHandler {
@@ -181,6 +187,33 @@ impl RequestHandler {
 
         Ok(())
     }
+    fn get_parameters_url_postfix(&self) -> String {
+        let parameters_list = vec![
+            "temperature_2m",
+            "relative_humidity_2m",
+            "precipitation",
+            "rain",
+            "surface_pressure",
+            "wind_speed_10m",
+            "direct_radiation",
+            "direct_radiation_instant",
+            "direct_normal_irradiance",
+            "direct_normal_irradiance_instant",
+            "shortwave_radiation",
+            "diffuse_radiation",
+            "terrestrial_radiation",
+            "terrestrial_radiation_instant",
+        ];
+        let mut parameters = String::new();
+
+        for (index, parameter) in parameters_list.iter().enumerate() {
+            parameters.push_str(parameter);
+            if index < parameters_list.len() - 1 {
+                parameters.push_str(",");
+            }
+        }
+        parameters
+    }
 
     fn create_url(
         &self,
@@ -191,10 +224,13 @@ impl RequestHandler {
         let start_date = start.format("%Y-%m-%d").to_string();
         let end_date = end.format("%Y-%m-%d").to_string();
 
+        let params_postfix = self.get_parameters_url_postfix();
+
         let url = format!(
-            "{}?latitude={}&longitude={}&start_date={}&end_date={}&{}",
-            &BASE_URL, coordinates.lat, coordinates.lon, start_date, end_date, FEATURES
+            "{}?latitude={}&longitude={}&start_date={}&end_date={}&hourly={}",
+            &BASE_URL, coordinates.lat, coordinates.lon, start_date, end_date, params_postfix
         );
+        println!("{}", url);
         url
     }
     async fn get_data(
@@ -237,6 +273,13 @@ impl RequestHandler {
                 Some(surface_pressure),
                 Some(wind_speed),
                 Some(direct_radiation),
+                Some(direct_radiation_instant),
+                Some(direct_normal_irradiance),
+                Some(direct_normal_irradiance_instant),
+                Some(shortwave_radiation),
+                Some(diffuse_radiation),
+                Some(terrestrial_radiation),
+                Some(terrestrial_radiation_instant),
             ) = (
                 response.hourly.time.get(i),
                 response.hourly.temperature_2m.get(i),
@@ -246,6 +289,13 @@ impl RequestHandler {
                 response.hourly.surface_pressure.get(i),
                 response.hourly.wind_speed_10m.get(i),
                 response.hourly.direct_radiation.get(i),
+                response.hourly.direct_radiation_instant.get(i),
+                response.hourly.direct_normal_irradiance.get(i),
+                response.hourly.direct_normal_irradiance_instant.get(i),
+                response.hourly.shortwave_radiation.get(i),
+                response.hourly.diffuse_radiation.get(i),
+                response.hourly.terrestrial_radiation.get(i),
+                response.hourly.terrestrial_radiation_instant.get(i),
             ) {
                 let formatted_data = FormattedWeatherData::new(
                     datetime.to_string(),
@@ -257,6 +307,13 @@ impl RequestHandler {
                     *wind_speed,
                     *direct_radiation,
                     coordinates.0.clone(),
+                    *direct_radiation_instant,
+                    *direct_normal_irradiance,
+                    *direct_normal_irradiance_instant,
+                    *shortwave_radiation,
+                    *diffuse_radiation,
+                    *terrestrial_radiation,
+                    *terrestrial_radiation_instant,
                 );
                 let mongo_doc: Document = formatted_data.into();
                 data_vec.push(mongo_doc);
