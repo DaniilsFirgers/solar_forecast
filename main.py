@@ -14,15 +14,14 @@ from sklearn.metrics import r2_score
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
-SPLIT_RATIO = 0.8
-BATCH_SIZE = 32
+SPLIT_RATIO = 0.75
 NUM_EPOCHS = 1000
 LSTM_HIDDEN_SIZE = 128
-LSTM_LAYERS = 2
+LSTM_LAYERS = 1
 window = 1
 
 filter_query = {
-    "object_name": "C"
+    "object_name": "B"
 }
 
 historical_data = mongo_handler.retrieve_production_data(
@@ -42,8 +41,8 @@ merged_df = pd.merge(historical_data, weather_data,
 scaler = MinMaxScaler()
 merged_df.set_index("start_time", inplace=True)
 
-X = merged_df[['direct_radiation', 'precipitation', 'pressure',
-               'rain', 'relative_humidity', 'temperature', 'wind_speed']]
+X = merged_df[['shortwave_radiation',
+               'temperature', 'terrestrial_radiation_instant', 'relative_humidity', 'pressure']]
 y = merged_df['value']
 
 scaler = MinMaxScaler()
@@ -63,7 +62,7 @@ lstm_model = LSTM(input_size=X_train.shape[1], hidden_size=LSTM_HIDDEN_SIZE,
                   num_layers=LSTM_LAYERS, output_size=1)
 
 criterion = nn.MSELoss(reduction='mean')
-optimizer = torch.optim.Adam(lstm_model.parameters(), lr=0.001)
+optimizer = torch.optim.Adam(lstm_model.parameters(), lr=0.002)
 
 
 train_losses = []
@@ -109,6 +108,7 @@ plt.plot(range(1, len(train_losses) + 1), train_losses, label='Training Loss')
 plt.plot(range(1, len(train_losses) + 1), test_losses, label='Validation Loss')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
-plt.title('Training and Validation Loss for LSTM Model')
+plt.title('Training and Validation Loss for object B with LSTM model')
 plt.legend()
+plt.savefig('plots/lstm_B.png')
 plt.show()
