@@ -10,18 +10,19 @@ import matplotlib
 from sklearn.model_selection import train_test_split
 from data_handling.transform import EarlyStopping
 from models.main import LSTM
+from sklearn.metrics import r2_score
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 SPLIT_RATIO = 0.8
 BATCH_SIZE = 32
 NUM_EPOCHS = 1000
-LSTM_HIDDEN_SIZE = 64
+LSTM_HIDDEN_SIZE = 128
 LSTM_LAYERS = 2
 window = 1
 
 filter_query = {
-    "object_name": "A"
+    "object_name": "C"
 }
 
 historical_data = mongo_handler.retrieve_production_data(
@@ -89,8 +90,13 @@ for epoch in range(NUM_EPOCHS):
 
     # val_loss = running_vloss / len(test_loader)
     if (epoch + 1) % 10 == 0:
+        test_outputs = scaler.inverse_transform(
+            test_outputs.reshape(-1, 1)).flatten()
+        y_test_original = scaler.inverse_transform(
+            y_test.numpy().reshape(-1, 1)).flatten()
+        r2 = r2_score(y_test_original, test_outputs)
         print(
-            f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {loss.item():.4f}, Test Loss: {test_loss.item():.4f}")
+            f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {loss.item():.4f}, Test Loss: {test_loss.item():.4f}, Test R2: {r2:.4f}")
 
     test_losses.append(test_loss)
     early_stopping.update(test_loss, lstm_model)
