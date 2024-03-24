@@ -28,6 +28,13 @@ class WeatherDataPoint:
     relative_humidity: float
     temperature: float
     wind_speed: float
+    diffuse_radiation: float
+    direct_normal_irradiance: float
+    direct_normal_irradiance_instant: float
+    direct_radiation_instant: float
+    shortwave_radiation: float
+    terrestrial_radiation: float
+    terrestrial_radiation_instant: float
     _id: str
 
     def to_object(self):
@@ -40,6 +47,13 @@ class WeatherDataPoint:
             "relative_humidity": self.relative_humidity,
             "temperature": self.temperature,
             "wind_speed": self.wind_speed,
+            "diffuse_radiation": self.diffuse_radiation,
+            "direct_normal_irradiance": self.direct_normal_irradiance,
+            "direct_normal_irradiance_instant": self.direct_normal_irradiance_instant,
+            "direct_radiation_instant": self.direct_radiation_instant,
+            "shortwave_radiation": self.shortwave_radiation,
+            "terrestrial_radiation": self.terrestrial_radiation,
+            "terrestrial_radiation_instant": self.terrestrial_radiation_instant,
         }
 
 
