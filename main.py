@@ -8,7 +8,7 @@ from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
 from sklearn.model_selection import train_test_split
-from data_handling.transform import EarlyStopping, Plot
+from data_handling.transform import EarlyStopping, Plot, DataTransformer
 from models.main import LSTM
 from sklearn.metrics import r2_score
 
@@ -32,13 +32,14 @@ if historical_data is None or weather_data is None:
     print("Error retrieving data from MongoDB.")
     exit(1)
 
+data_transformer = DataTransformer(historical_data, weather_data)
+
 historical_data['start_time'] = pd.to_datetime(historical_data['start_time'])
 weather_data['start_time'] = pd.to_datetime(weather_data['start_time'])
 
 merged_df = pd.merge(historical_data, weather_data,
                      on='start_time', how='inner')
 
-scaler = MinMaxScaler()
 merged_df.set_index("start_time", inplace=True)
 
 X = merged_df[['shortwave_radiation',
