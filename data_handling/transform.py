@@ -116,7 +116,7 @@ class DataTransformer:
         self.test_size = test_size
         self.random_state = random_state
 
-    def get_train_test_data(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_merged_df(self) -> DataFrame:
         self.historical_production_data['start_time'] = pd.to_datetime(
             self.historical_production_data['start_time'])
         self.weather_data['start_time'] = pd.to_datetime(
@@ -126,23 +126,9 @@ class DataTransformer:
                                          on='start_time', how='inner')
         self.merged_dataframe.set_index("start_time", inplace=True)
 
-        scaled_data = self.__scale_data()
-        return self.__get_train_and_test(scaled_data)
+        return self.merged_dataframe
 
-    def __scale_data(self) -> tuple[ndarray, ndarray]:
-        X = self.merged_dataframe[['shortwave_radiation',
-                                   'temperature', 'terrestrial_radiation_instant', 'relative_humidity', 'pressure']]
-        y = self.merged_dataframe['value']
-
-        scaler = MinMaxScaler()
-
-        X_scaled = scaler.fit_transform(X)
-        y_scaled = scaler.fit_transform(y.values.reshape(-1, 1))
-
-        return X_scaled, y_scaled
-
-    def __get_train_and_test(self, scaled_data: tuple[ndarray, ndarray]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        X_scaled, y_scaled = scaled_data
+    def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         X_train, X_test, y_train, y_test = train_test_split(
             X_scaled, y_scaled, test_size=self.test_size,  random_state=self.random_state)
 
