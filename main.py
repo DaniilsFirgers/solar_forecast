@@ -8,7 +8,7 @@ from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
 from sklearn.model_selection import train_test_split
-from data_handling.transform import EarlyStopping
+from data_handling.transform import EarlyStopping, Plot
 from models.main import LSTM
 from sklearn.metrics import r2_score
 
@@ -21,7 +21,7 @@ LSTM_LAYERS = 1
 window = 1
 
 filter_query = {
-    "object_name": "B"
+    "object_name": "C"
 }
 
 historical_data = mongo_handler.retrieve_production_data(
@@ -51,7 +51,7 @@ X_scaled = scaler.fit_transform(X)
 y_scaled = scaler.fit_transform(y.values.reshape(-1, 1))
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X_scaled, y_scaled, test_size=0.2,  random_state=42)
+    X_scaled, y_scaled, test_size=0.25,  random_state=42)
 
 X_train = torch.from_numpy(X_train).float()
 y_train = torch.squeeze(torch.from_numpy(y_train).float())
@@ -70,6 +70,8 @@ test_losses = []
 
 
 early_stopping = EarlyStopping(patience=50, min_delta=0.0001)
+plot = Plot('LSTM', 'C', fig_size=(10, 5),
+            train_losses=train_losses, test_losses=test_losses)
 
 BEST_VAL_LOSS = int(1e9)
 # Training loop
@@ -87,7 +89,6 @@ for epoch in range(NUM_EPOCHS):
         test_outputs = lstm_model(X_test.unsqueeze(1)).squeeze()
         test_loss = criterion(test_outputs, y_test)
 
-    # val_loss = running_vloss / len(test_loader)
     if (epoch + 1) % 10 == 0:
         test_outputs = scaler.inverse_transform(
             test_outputs.reshape(-1, 1)).flatten()
@@ -103,12 +104,4 @@ for epoch in range(NUM_EPOCHS):
         print(f'Early stopping at epoch {epoch}')
         break
 
-plt.figure(figsize=(10, 6))
-plt.plot(range(1, len(train_losses) + 1), train_losses, label='Training Loss')
-plt.plot(range(1, len(train_losses) + 1), test_losses, label='Validation Loss')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.title('Training and Validation Loss for object B with LSTM model')
-plt.legend()
-plt.savefig('plots/lstm_B.png')
-plt.show()
+plot.plot_model_results()

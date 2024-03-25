@@ -1,6 +1,7 @@
 import copy
 import dataclasses
 import datetime as dt
+import matplotlib.pyplot as plt
 
 
 @dataclasses.dataclass
@@ -78,3 +79,24 @@ class EarlyStopping:
 
     def should_stop(self):
         return self.early_stop
+
+
+class Plot():
+    def __init__(self, model_name: str, object_name: str, fig_size=(10, 5), train_losses: list = [], test_losses: list = []):
+        self.model_name = model_name
+        self.object_name = object_name
+        self.fig_size = fig_size
+        self.train_losses = train_losses
+        self.test_losses = test_losses
+
+    def plot_model_results(self):
+        plt.figure(figsize=self.fig_size)
+        plt.plot(range(1, len(self.train_losses) + 1),
+                 self.train_losses, label='Training Loss')
+        plt.plot(range(1, len(self.test_losses) + 1),
+                 self.test_losses, label='Validation Loss')
+        plt.title(
+            f'Training and Validation Loss for {self.model_name} model - object {self.object_name}')
+        plt.legend()
+        plt.savefig(f'plots/{self.model_name}-{self.object_name}.png')
+        plt.show()
