@@ -6,8 +6,8 @@ from numpy import ndarray
 from pandas import DataFrame
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
 import torch
+from enum import Enum
 
 
 @dataclasses.dataclass
@@ -64,19 +64,29 @@ class WeatherDataPoint:
         }
 
 
+class ModelType(Enum):
+    LSTM = 'LSTM'
+    RNN = 'RNN'
+
+
 class EarlyStopping:
-    def __init__(self, patience=10, min_delta=0):
+    def __init__(self, patience=10, min_delta=0, model_type=ModelType.LSTM):
         self.patience = patience
         self.min_delta = min_delta
         self.best_loss = float('inf')
         self.counter = 0
         self.early_stop = False
         self.best_model_weights = None
+        self.model_type = model_type
 
     def update(self, val_loss, model):
         if val_loss < self.best_loss - self.min_delta:
             self.best_loss = val_loss
-            self.best_model_weights = copy.deepcopy(model.state_dict())
+            if self.model_type == ModelType.LSTM:
+                self.best_model_weights = copy.deepcopy(model.state_dict())
+            elif self.model_type == ModelType.RNN:
+                self.best_model_weights = copy.deepcopy(
+                    model.get_weights())
             self.counter = 0
         else:
             self.counter += 1
@@ -88,24 +98,31 @@ class EarlyStopping:
 
 
 class Plot():
-    def __init__(self, model_name: str, object_name: str, fig_size=(10, 5), train_losses: list = [], test_losses: list = []):
+    def __init__(self, model_name: str, object_name: str, x_label: str, y_label: str, title: str, save_path: str, fig_size=(10, 5), x_data: list = [], y_data: list = [], x_color='blue', y_color='red'):
         self.model_name = model_name
         self.object_name = object_name
         self.fig_size = fig_size
-        self.train_losses = train_losses
-        self.test_losses = test_losses
+        self.x_data = x_data
+        self.y_data = y_data
+        self.x_label = x_label
+        self.y_label = y_label
+        self.title = title
+        self.save_path = save_path
+        self.x_color = x_color
+        self.y_color = y_color
 
-    def plot_model_results(self):
+    def create_plot(self):
         plt.figure(figsize=self.fig_size)
-        plt.plot(range(1, len(self.train_losses) + 1),
-                 self.train_losses, label='Training Loss')
-        plt.plot(range(1, len(self.test_losses) + 1),
-                 self.test_losses, label='Validation Loss')
+        plt.plot(range(1, len(self.x_data) + 1), self.x_data,
+                 label=self.x_label, color=self.x_color)
+        plt.plot(range(1, len(self.y_data) + 1), self.y_data,
+                 label=self.y_label, color=self.y_color)
         plt.title(
-            f'Training and Validation Loss for {self.model_name} model - object {self.object_name}')
+            self.title)
         plt.legend()
-        plt.savefig(f'plots/{self.model_name}-{self.object_name}.png')
-        plt.show()
+        plt.grid(True)
+        plt.savefig(self.save_path)
+        plt.close()
 
 
 class DataTransformer:
@@ -116,6 +133,15 @@ class DataTransformer:
         self.test_size = test_size
         self.random_state = random_state
 
+    def add_lagged_features(self, lagged_features: list, lag_steps: int):
+        for feature in lagged_features:
+            for i in range(1, lag_steps + 1):
+                self.merged_dataframe[f'{feature}_lag_{i}'] = self.merged_dataframe[feature].shift(
+                    i)
+
+        # Drop rows with NaN values resulted from shifting
+        self.merged_dataframe.dropna(inplace=True)
+
     def get_merged_df(self) -> DataFrame:
         self.historical_production_data['start_time'] = pd.to_datetime(
             self.historical_production_data['start_time'])
@@ -124,9 +150,18 @@ class DataTransformer:
 
         self.merged_dataframe = pd.merge(self.historical_production_data, self.weather_data,
                                          on='start_time', how='inner')
+
+        self.merged_dataframe['year'] = self.merged_dataframe['start_time'].dt.year
+        self.merged_dataframe['month'] = self.merged_dataframe['start_time'].dt.month
+        self.merged_dataframe['day_of_week'] = self.merged_dataframe['start_time'].dt.dayofweek
+        self.merged_dataframe['hour'] = self.merged_dataframe['start_time'].dt.hour
+
         self.merged_dataframe.set_index("start_time", inplace=True)
 
         return self.merged_dataframe
+
+    def is_weekend(day_of_week):
+        return 1 if day_of_week >= 5 else 0
 
     def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         X_train, X_test, y_train, y_test = train_test_split(
