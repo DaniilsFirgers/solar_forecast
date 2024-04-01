@@ -13,12 +13,10 @@ class MongoDBHandler:
         self.db_config = db_config
         self.client = MongoClient(
             self.db_config.host, self.db_config.port, username=self.db_config.username, password=self.db_config.password)
-        print("Connected to MongoDB.")
 
     def disconnect(self):
         if self.client:
             self.client.close()
-            print("Disconnected from MongoDB.")
 
     def retrieve_production_data(self, database_name, collection_name, filter_query={}):
         # Retrieve data from MongoDB with optional filter
