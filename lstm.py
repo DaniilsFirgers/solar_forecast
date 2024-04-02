@@ -18,7 +18,7 @@ SPLIT_RATIO = 0.75
 NUM_EPOCHS = 1000
 LSTM_HIDDEN_SIZE = 128
 LSTM_LAYERS = 1
-OBJECTS = ['C']
+OBJECTS = ['B']
 INPUT_FEATURES = ['temperature', 'relative_humidity', 'pressure', 'rain',
                   'wind_speed', "shortwave_radiation", 'month', 'day_of_week', 'hour', 'value_lag_1']
 LAGGED_FEATURES = ['value']
@@ -84,7 +84,6 @@ for object in OBJECTS:
     results_plot = Plot('LSTM', object_name=object, fig_size=(10, 5), x_label='Ground truth', y_label='Predicted value', title=results_plot_title, save_path=results_save_path,
                         x_data=ground_truth, y_data=predicted)
 
-    BEST_VAL_LOSS = int(1e9)
     # Training loop
     for epoch in range(NUM_EPOCHS):
         outputs = lstm_model(X_train.unsqueeze(1)).squeeze()

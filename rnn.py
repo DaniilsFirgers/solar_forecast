@@ -21,7 +21,7 @@ NUM_EPOCHS = 1000
 RNN_HIDDEN_SIZE = 256
 RNN_LAYERS = 1
 LEARNING_RATE = 0.001
-OBJECTS = ['C']
+OBJECTS = ['A', 'B', 'C']
 INPUT_FEATURES = ['temperature', 'relative_humidity', 'pressure', 'rain',
                   'wind_speed', "shortwave_radiation", 'month', 'day_of_week', 'hour', 'value_lag_1']
 LAGGED_FEATURES = ['value']
@@ -74,6 +74,18 @@ for object in OBJECTS:
 
     early_stopping = EarlyStopping(
         patience=40, min_delta=0.001, model_type=ModelType.LSTM)
+
+    model_plot_title = f'Training and Validation Loss for lSTM model - object {object}'
+    model_save_path = f'plots/RNN-{object}-loss.png'
+
+    model_plot = Plot('RNN', object_name=object, fig_size=(10, 5), x_label='Train Loss', y_label='Test Loss', title=model_plot_title, save_path=model_save_path,
+                      x_data=train_losses, y_data=test_losses)
+
+    results_plot_title = f'Predicted vs Ground Truth for RNN model - object {object}'
+    results_save_path = f'plots/RNN-{object}-results.png'
+    results_plot = Plot('RNN', object_name=object, fig_size=(10, 5), x_label='Ground truth', y_label='Predicted value', title=results_plot_title, save_path=results_save_path,
+                        x_data=ground_truth, y_data=predicted)
+
     # Training loop
     for epoch in range(NUM_EPOCHS):
         outputs = model(X_train.unsqueeze(1)).squeeze()
@@ -105,11 +117,17 @@ for object in OBJECTS:
             ground_truth = y_test_original
             print(f'Early stopping at epoch {epoch}')
             break
-    # Plotting loss evolution
-    plt.plot(train_losses, label='Train Loss')
-    plt.plot(test_losses, label='Test Loss')
-    plt.title('Model Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
+    model_plot.create_plot()
+
+    plt.plot(range(1, len(predicted)+1), predicted,
+             color='yellow', label='Predictions')
+    # Plot truth values as a red line
+    plt.plot(range(1, len(ground_truth)+1), ground_truth,
+             color='green', label='Truth Values')
+    plt.xlabel('Index')
+    plt.ylabel('Values')
+    plt.title('Predictions vs Truth Values')
     plt.legend()
-    plt.show()
+    plt.grid(True)
+    plt.savefig(results_save_path)
+    plt.close()

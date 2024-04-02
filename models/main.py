@@ -37,7 +37,7 @@ class RNN(nn.Module):
         # (batch_dim, seq_dim, input_dim)
         # batch_dim = number of samples per batch
         self.rnn = nn.RNN(input_size, hidden_size, num_layers,
-                          batch_first=True, nonlinearity='tanh')
+                          batch_first=True)
 
         # Readout layer
         self.fc = nn.Linear(hidden_size, output_size)
@@ -56,5 +56,6 @@ class RNN(nn.Module):
         # out.size() --> 100, 28, 10
         # out[:, -1, :] --> 100, 10 --> just want last time step hidden states!
         out = self.fc(out[:, -1, :])
+        out = F.relu(out)
         # out.size() --> 100, 10
         return out
