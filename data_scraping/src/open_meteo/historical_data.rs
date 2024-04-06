@@ -103,16 +103,16 @@ impl RequestHandler {
         locations.insert(
             String::from("B"),
             Coordinates {
-                lon: String::from("56.722988"),
-                lat: String::from("21.575005"),
+                lat: String::from("56.722988"),
+                lon: String::from("21.575005"),
             },
         );
 
         locations.insert(
             String::from("C"),
             Coordinates {
-                lon: String::from("57.216143"),
-                lat: String::from("22.523923"),
+                lat: String::from("57.216143"),
+                lon: String::from("22.523923"),
             },
         );
 
