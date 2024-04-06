@@ -160,9 +160,6 @@ class DataTransformer:
 
         return self.merged_dataframe
 
-    def is_weekend(day_of_week):
-        return 1 if day_of_week >= 5 else 0
-
     def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         X_train, X_test, y_train, y_test = train_test_split(
             X_scaled, y_scaled, test_size=self.test_size,  random_state=self.random_state)

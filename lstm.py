@@ -3,7 +3,7 @@ import torch.nn as nn
 import pandas as pd
 
 from sklearn.preprocessing import MinMaxScaler
-from config.database import PRODUCTION_HISTORY_DB_NAME, PRODUCTION_HISTORY_COLLECTION_NAME, PRODUCTION_WEATHER_COLLECTION_NAME
+from config.database import FORECAST_DB_NAME, PRODUCTION_COLLECTION_NAME, WEATHER_COLLECTION_NAME
 from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
@@ -33,9 +33,9 @@ for object in OBJECTS:
     }
 
     historical_data = mongo_handler.retrieve_production_data(
-        PRODUCTION_HISTORY_DB_NAME, PRODUCTION_HISTORY_COLLECTION_NAME, filter_query)
+        FORECAST_DB_NAME, PRODUCTION_COLLECTION_NAME, filter_query)
     weather_data = mongo_handler.retrieve_weather_data(
-        PRODUCTION_HISTORY_DB_NAME, PRODUCTION_WEATHER_COLLECTION_NAME, filter_query)
+        FORECAST_DB_NAME, WEATHER_COLLECTION_NAME, filter_query)
     if historical_data is None or weather_data is None:
         print("Error retrieving data from MongoDB.")
         exit(1)
