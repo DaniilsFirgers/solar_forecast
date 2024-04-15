@@ -1,29 +1,25 @@
 import torch
 import torch.nn as nn
-import pandas as pd
-import copy
-
 from sklearn.preprocessing import MinMaxScaler
 from config.database import FORECAST_DB_NAME, PRODUCTION_COLLECTION_NAME, WEATHER_COLLECTION_NAME
 from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
-from sklearn.model_selection import train_test_split
-from data_handling.transform import EarlyStopping, ModelType, Plot, DataTransformer
-from models.main import LSTM, RNN
+from data_handling.transform import EarlyStopping, ModelType, PlotLoss, DataTransformer, PlotPredictions
+from models.main import RNN
 from sklearn.metrics import r2_score
-import tensorflow as tf
+from matplotlib.dates import AutoDateLocator, DateFormatter
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 SPLIT_RATIO = 0.75
 NUM_EPOCHS = 1000
-RNN_HIDDEN_SIZE = 256
-RNN_LAYERS = 1
+RNN_HIDDEN_SIZE = 128
+RNN_LAYERS = 2
 LEARNING_RATE = 0.001
-OBJECTS = ['A', 'B', 'C']
-INPUT_FEATURES = ['temperature', 'relative_humidity', 'pressure', 'rain',
-                  'wind_speed', "shortwave_radiation", 'month', 'day_of_week', 'hour', 'value_lag_1']
+OBJECTS = ['C']
+INPUT_FEATURES = ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
+                  'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour', 'value_lag_1']
 LAGGED_FEATURES = ['value']
 LAG_STEPS = 1
 
@@ -43,6 +39,12 @@ for object in OBJECTS:
         print("Error retrieving data from MongoDB.")
         exit(1)
 
+    loss_plot_title = f'RNN modeļa apmācības un validācijas zaudējumi {object} objektam'
+    loss_save_path = f'plots/RNN-{object}-loss.png'
+
+    results_plot_title = f'Ražošanas prognozes pret patiesajām vērtībām RNN modelim {object} objektam'
+    results_save_path = f'plots/RNN-{object}-results.png'
+
     data_transformer = DataTransformer(historical_data, weather_data)
 
     merged_df = data_transformer.get_merged_df()
@@ -57,7 +59,7 @@ for object in OBJECTS:
     Y_scaler.fit(y.values.reshape(-1, 1))
     y_scaled = Y_scaler.transform(y.values.reshape(-1, 1))
 
-    X_train, X_test, y_train, y_test = data_transformer.get_train_and_test(
+    X_train, X_test, y_train, y_test, ground_truth_df = data_transformer.get_train_and_test(
         X_scaled, y_scaled)
 
     model = RNN(input_size=X_train.shape[1], hidden_size=RNN_HIDDEN_SIZE,
@@ -74,17 +76,6 @@ for object in OBJECTS:
 
     early_stopping = EarlyStopping(
         patience=40, min_delta=0.001, model_type=ModelType.LSTM)
-
-    model_plot_title = f'Training and Validation Loss for lSTM model - object {object}'
-    model_save_path = f'plots/RNN-{object}-loss.png'
-
-    model_plot = Plot('RNN', object_name=object, fig_size=(10, 5), x_label='Train Loss', y_label='Test Loss', title=model_plot_title, save_path=model_save_path,
-                      x_data=train_losses, y_data=test_losses)
-
-    results_plot_title = f'Predicted vs Ground Truth for RNN model - object {object}'
-    results_save_path = f'plots/RNN-{object}-results.png'
-    results_plot = Plot('RNN', object_name=object, fig_size=(10, 5), x_label='Ground truth', y_label='Predicted value', title=results_plot_title, save_path=results_save_path,
-                        x_data=ground_truth, y_data=predicted)
 
     # Training loop
     for epoch in range(NUM_EPOCHS):
@@ -117,17 +108,10 @@ for object in OBJECTS:
             ground_truth = y_test_original
             print(f'Early stopping at epoch {epoch}')
             break
-    model_plot.create_plot()
 
-    plt.plot(range(1, len(predicted)+1), predicted,
-             color='yellow', label='Predictions')
-    # Plot truth values as a red line
-    plt.plot(range(1, len(ground_truth)+1), ground_truth,
-             color='green', label='Truth Values')
-    plt.xlabel('Index')
-    plt.ylabel('Values')
-    plt.title('Predictions vs Truth Values')
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(results_save_path)
-    plt.close()
+    loss_plot = PlotLoss('RNN', object_name=object, title=loss_plot_title, save_path=loss_save_path,
+                         x_data=train_losses, y_data=test_losses)
+    results_plot = PlotPredictions('RNN', object_name=object, title=results_plot_title, save_path=results_save_path, ground_truth=ground_truth_df,
+                                   x_data=ground_truth, y_data=predicted)
+    loss_plot.create_plot()
+    results_plot.create_plot()
