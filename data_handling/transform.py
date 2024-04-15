@@ -11,6 +11,8 @@ import torch
 from enum import Enum
 from itertools import combinations
 from torch.utils.data import Dataset
+from typing import List, TypedDict
+from sklearn.linear_model import Lasso, LinearRegression
 
 
 @dataclasses.dataclass
@@ -159,7 +161,7 @@ class PlotPredictions():
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
-        # plt.savefig(self.save_path)
+        plt.savefig(self.save_path)
         plt.close()
 
 
@@ -212,6 +214,15 @@ class DataTransformer:
         ground_truth_test = self.merged_dataframe['value'].iloc[split_index:]
 
         return X_train, X_test, y_train, y_test, ground_truth_test
+
+
+class LinearModel(TypedDict):
+    name: str
+    model: Lasso | LinearRegression
+    input_features: List[str]
+    lagged_features: List[str]
+    lag_steps: int
+    short_name: str
 
 
 PARAMETERS_NAME_MAP = {"temperature": "Temperatūra", "relative_humidity": "Relatīvais mitrums", "wind_speed": "Vēja ātrums", "pressure": "Atmosfēras spiediens",
