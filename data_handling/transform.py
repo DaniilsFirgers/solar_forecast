@@ -1,6 +1,7 @@
 import copy
 import dataclasses
 import datetime as dt
+from matplotlib.dates import AutoDateLocator, DateFormatter
 import matplotlib.pyplot as plt
 from numpy import ndarray
 from pandas import DataFrame
@@ -8,6 +9,8 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import torch
 from enum import Enum
+from itertools import combinations
+from torch.utils.data import Dataset
 
 
 @dataclasses.dataclass
@@ -97,8 +100,8 @@ class EarlyStopping:
         return self.early_stop
 
 
-class Plot():
-    def __init__(self, model_name: str, object_name: str, x_label: str, y_label: str, title: str, save_path: str, fig_size=(10, 5), x_data: list = [], y_data: list = [], x_color='blue', y_color='red'):
+class PlotLoss():
+    def __init__(self, model_name: str, object_name: str, title: str, save_path: str, x_label='Apmācības zaudējumi', y_label='Validācijas zaudējumi', fig_size=(10, 5), x_data: list = [], y_data: list = [], x_color='blue', y_color='red'):
         self.model_name = model_name
         self.object_name = object_name
         self.fig_size = fig_size
@@ -122,6 +125,41 @@ class Plot():
         plt.legend()
         plt.grid(True)
         plt.savefig(self.save_path)
+        plt.close()
+
+
+class PlotPredictions():
+    def __init__(self, model_name: str, object_name: str, title: str, save_path: str, ground_truth: DataFrame,  x_label='Patiesās vērtībās', y_label='Prognozetas vērtībās',  fig_size=(10, 5), x_data: list = [], y_data: list = [],  x_color='blue', y_color='green'):
+        self.model_name = model_name
+        self.object_name = object_name
+        self.fig_size = fig_size
+        self.x_data = x_data
+        self.y_data = y_data
+        self.x_label = x_label
+        self.y_label = y_label
+        self.title = title
+        self.save_path = save_path
+        self.x_color = x_color
+        self.y_color = y_color
+        self.ground_truth = ground_truth
+
+    def create_plot(self):
+        index_array = self.ground_truth.index.to_numpy()
+        plt.figure(figsize=self.fig_size)
+        plt.plot(index_array, self.x_data,
+                 label=self.x_label, color=self.x_color)
+        plt.plot(index_array, self.y_data,
+                 label=self.y_label, color=self.y_color)
+        plt.title(
+            self.title)
+        plt.legend()
+        plt.grid(True)
+        plt.gca().xaxis.set_major_locator(AutoDateLocator())
+        plt.gca().xaxis.set_major_formatter(DateFormatter('%d-%m-%y %H:%M'))
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+        # plt.savefig(self.save_path)
         plt.close()
 
 
@@ -160,7 +198,7 @@ class DataTransformer:
 
         return self.merged_dataframe
 
-    def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, any]:
         X_train, X_test, y_train, y_test = train_test_split(
             X_scaled, y_scaled, test_size=self.test_size,  random_state=self.random_state)
 
@@ -170,4 +208,23 @@ class DataTransformer:
         X_test = torch.from_numpy(X_test).float()
         y_test = torch.squeeze(torch.from_numpy(y_test).float())
 
-        return X_train, X_test, y_train, y_test
+        split_index = int(len(X_scaled) * (1 - self.test_size))
+        ground_truth_test = self.merged_dataframe['value'].iloc[split_index:]
+
+        return X_train, X_test, y_train, y_test, ground_truth_test
+
+
+PARAMETERS_NAME_MAP = {"temperature": "Temperatūra", "relative_humidity": "Relatīvais mitrums", "wind_speed": "Vēja ātrums", "pressure": "Atmosfēras spiediens",
+                       "rain": "Lietus", "direct_radiation": "Tiešais starojums", "diffuse_radiation": "Difūzā atstarošanās", "precipitation": "Nokrišņi",
+                       "direct_radiation_instant": "Momentālais tiešais starojums", "diffuse_radiation_instant": "Momentāla tieša difūzā atstarošanās", "direct_normal_irradiance": "Tiešais normālais starojums",
+                       "direct_normal_irradiance_instant": "Mom. tiešais normālais starojums", "shortwave_radiation": "Īsviļņu radiācija", "terrestrial_radiation": "Zemes starojums", "terrestrial_radiation_instant": "Momentālais zemes starojums", "value_lag_1": "Ražošana vērtības ar nobīdi 1"}
+
+
+def generate_unique_feature_combinations(features):
+    unique_combinations = []
+    for r in range(1, len(features) + 1):
+        for combo in combinations(features, r):
+            sorted_combo = sorted(combo)
+            if sorted_combo not in unique_combinations:
+                unique_combinations.append(sorted_combo)
+    return unique_combinations
