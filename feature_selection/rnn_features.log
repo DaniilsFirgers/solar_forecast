@@ -1,0 +1,16 @@
+2024-04-13 09:53:52,176:INFO:New best combination found: ['temperature'], R2: 0.3700856731036729
+2024-04-13 09:53:54,589:INFO:New best combination found: ['relative_humidity'], R2: 0.3726296836924744
+2024-04-13 09:54:03,816:INFO:New best combination found: ['shortwave_radiation'], R2: 0.7710727384000163
+2024-04-13 09:54:36,222:INFO:New best combination found: ['shortwave_radiation', 'temperature'], R2: 0.7713428827964113
+2024-04-13 09:54:58,507:INFO:New best combination found: ['relative_humidity', 'shortwave_radiation'], R2: 0.7802189256427672
+2024-04-13 09:56:49,185:INFO:New best combination found: ['relative_humidity', 'shortwave_radiation', 'temperature'], R2: 0.781123314461567
+2024-04-13 09:58:45,323:INFO:New best combination found: ['pressure', 'relative_humidity', 'shortwave_radiation'], R2: 0.7868054031988245
+2024-04-13 10:02:42,054:INFO:New best combination found: ['pressure', 'relative_humidity', 'shortwave_radiation', 'temperature'], R2: 0.78747732605014
+2024-04-13 10:07:01,465:INFO:New best combination found: ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation'], R2: 0.7876327086384635
+2024-04-13 10:07:37,434:INFO:New best combination found: ['pressure', 'relative_humidity', 'shortwave_radiation', 'terrestrial_radiation'], R2: 0.7877305927454011
+2024-04-13 10:13:03,165:INFO:New best combination found: ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation', 'temperature'], R2: 0.7881309600639479
+2024-04-13 10:13:47,548:INFO:New best combination found: ['pressure', 'relative_humidity', 'shortwave_radiation', 'temperature', 'terrestrial_radiation'], R2: 0.7887476569511915
+2024-04-13 10:20:23,054:INFO:New best combination found: ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation', 'terrestrial_radiation'], R2: 0.7889672970993118
+2024-04-13 10:27:29,240:INFO:New best combination found: ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation', 'temperature', 'terrestrial_radiation'], R2: 0.7899053142796633
+2024-04-13 10:43:18,820:INFO:New best combination found: ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation', 'temperature', 'terrestrial_radiation', 'wind_speed'], R2: 0.790272701588282
+2024-04-13 10:53:50,690:INFO:New best combination found: ['direct_normal_irradiance_instant', 'pressure', 'rain', 'relative_humidity', 'shortwave_radiation', 'temperature', 'terrestrial_radiation', 'wind_speed'], R2: 0.7907499229219422
