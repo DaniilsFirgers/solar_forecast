@@ -8,18 +8,22 @@ class LSTM(nn.Module):
         super(LSTM, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+
+        self.h0 = nn.Parameter(torch.zeros(num_layers, 1, hidden_size))
+        self.c0 = nn.Parameter(torch.zeros(num_layers, 1, hidden_size))
+
         self.lstm = nn.LSTM(input_size, hidden_size,
                             num_layers, dropout=dropout, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
 
     def forward(self, x):
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size)
+        h0 = self.h0.expand(-1, x.size(0), -1).contiguous()
+        c0 = self.c0.expand(-1, x.size(0), -1).contiguous()
 
         out, _ = self.lstm(x, (h0, c0))
         out = self.fc(out[:, -1, :])
 
-        out = F.relu(out)
+        out = F.softplus(out, beta=35, threshold=1)
         return out
 
 
@@ -56,6 +60,6 @@ class RNN(nn.Module):
         # out.size() --> 100, 28, 10
         # out[:, -1, :] --> 100, 10 --> just want last time step hidden states!
         out = self.fc(out[:, -1, :])
-        out = F.relu(out)
+        out = F.softplus(out, beta=35, threshold=1)
         # out.size() --> 100, 10
         return out
