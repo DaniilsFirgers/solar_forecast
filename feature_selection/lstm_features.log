@@ -1,0 +1,12 @@
+2024-04-12 18:05:56,360:INFO:New best combination found: ['temperature'], R2: 0.368062423865931
+2024-04-12 18:06:04,702:INFO:New best combination found: ['relative_humidity'], R2: 0.3712218269896669
+2024-04-12 18:06:31,795:INFO:New best combination found: ['shortwave_radiation'], R2: 0.7709106410080175
+2024-04-12 18:08:07,166:INFO:New best combination found: ['shortwave_radiation', 'temperature'], R2: 0.7715213438312171
+2024-04-12 18:09:19,493:INFO:New best combination found: ['relative_humidity', 'shortwave_radiation'], R2: 0.7806609601492687
+2024-04-12 18:14:53,277:INFO:New best combination found: ['relative_humidity', 'shortwave_radiation', 'temperature'], R2: 0.7831714413745802
+2024-04-12 18:21:36,614:INFO:New best combination found: ['pressure', 'relative_humidity', 'shortwave_radiation'], R2: 0.7884984521510944
+2024-04-12 18:39:36,068:INFO:New best combination found: ['pressure', 'relative_humidity', 'shortwave_radiation', 'temperature'], R2: 0.7997445245429897
+2024-04-12 19:34:11,430:INFO:New best combination found: ['direct_normal_irradiance', 'rain', 'relative_humidity', 'shortwave_radiation', 'temperature'], R2: 0.8060224708981918
+2024-04-12 20:44:48,936:INFO:New best combination found: ['direct_normal_irradiance_instant', 'rain', 'relative_humidity', 'shortwave_radiation', 'temperature', 'wind_speed'], R2: 0.8060818206880516
+2024-04-12 20:53:14,278:INFO:New best combination found: ['direct_normal_irradiance_instant', 'direct_radiation', 'relative_humidity', 'shortwave_radiation', 'temperature', 'wind_speed'], R2: 0.8080868098582086
+2024-04-12 22:27:07,378:INFO:New best combination found: ['direct_normal_irradiance', 'direct_radiation', 'pressure', 'relative_humidity', 'shortwave_radiation', 'temperature', 'terrestrial_radiation', 'wind_speed'], R2: 0.8091067852086281
