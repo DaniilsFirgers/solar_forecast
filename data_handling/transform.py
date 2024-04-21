@@ -1,6 +1,7 @@
 import copy
 import dataclasses
 import datetime as dt
+import os
 from matplotlib.dates import AutoDateLocator, DateFormatter
 import matplotlib.pyplot as plt
 from numpy import ndarray
@@ -72,10 +73,11 @@ class WeatherDataPoint:
 class ModelType(Enum):
     LSTM = 'LSTM'
     RNN = 'RNN'
+    NBEATS = 'NBEATS'
 
 
 class EarlyStopping:
-    def __init__(self, patience=10, min_delta=0, model_type=ModelType.LSTM):
+    def __init__(self, object_name: str, patience=10, min_delta=0, model_type=ModelType.LSTM):
         self.patience = patience
         self.min_delta = min_delta
         self.best_loss = float('inf')
@@ -83,15 +85,14 @@ class EarlyStopping:
         self.early_stop = False
         self.best_model_weights = None
         self.model_type = model_type
+        self.save_dir = "trained_models/"
+        self.object_name = object_name
 
     def update(self, val_loss, model):
         if val_loss < self.best_loss - self.min_delta:
             self.best_loss = val_loss
-            if self.model_type == ModelType.LSTM:
+            if self.model_type != ModelType.NBEATS:
                 self.best_model_weights = copy.deepcopy(model.state_dict())
-            elif self.model_type == ModelType.RNN:
-                self.best_model_weights = copy.deepcopy(
-                    model.get_weights())
             self.counter = 0
         else:
             self.counter += 1
@@ -100,6 +101,13 @@ class EarlyStopping:
 
     def should_stop(self):
         return self.early_stop
+
+    def save_best_model_weights(self):
+        if self.best_model_weights is not None:
+            if not os.path.exists(self.save_dir):
+                os.makedirs(self.save_dir)
+            torch.save(self.best_model_weights, os.path.join(
+                self.save_dir, f'best_{self.model_type.value}_weights_{self.object_name}.pt'))
 
 
 class PlotLoss():
@@ -161,7 +169,7 @@ class PlotPredictions():
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
-        plt.savefig(self.save_path)
+        # plt.savefig(self.save_path)
         plt.close()
 
 
@@ -216,19 +224,19 @@ class DataTransformer:
         return X_train, X_test, y_train, y_test, ground_truth_test
 
 
-class LinearModel(TypedDict):
+class ModelWrapper(TypedDict):
     name: str
-    model: Lasso | LinearRegression
+    model: Lasso | LinearRegression | None
     input_features: List[str]
-    lagged_features: List[str]
-    lag_steps: int
     short_name: str
+    hidden_layers: int | None
+    layers: int | None
 
 
-PARAMETERS_NAME_MAP = {"temperature": "Temperatūra", "relative_humidity": "Relatīvais mitrums", "wind_speed": "Vēja ātrums", "pressure": "Atmosfēras spiediens",
+PARAMETERS_NAME_MAP = {"value": "Ražošanas vērtības", "temperature": "Temperatūra", "relative_humidity": "Relatīvais mitrums", "wind_speed": "Vēja ātrums", "pressure": "Atmosfēras spiediens",
                        "rain": "Lietus", "direct_radiation": "Tiešais starojums", "diffuse_radiation": "Difūzā atstarošanās", "precipitation": "Nokrišņi",
                        "direct_radiation_instant": "Momentālais tiešais starojums", "diffuse_radiation_instant": "Momentāla tieša difūzā atstarošanās", "direct_normal_irradiance": "Tiešais normālais starojums",
-                       "direct_normal_irradiance_instant": "Mom. tiešais normālais starojums", "shortwave_radiation": "Īsviļņu radiācija", "terrestrial_radiation": "Zemes starojums", "terrestrial_radiation_instant": "Momentālais zemes starojums", "value_lag_1": "Ražošana vērtības ar nobīdi 1"}
+                       "direct_normal_irradiance_instant": "Mom. tiešais normālais starojums", "shortwave_radiation": "Īsviļņu radiācija", "terrestrial_radiation": "Zemes starojums", "terrestrial_radiation_instant": "Momentālais zemes starojums", "value_lag_1": "Ražošanas vērtības ar nobīdi 1"}
 
 
 def generate_unique_feature_combinations(features):
