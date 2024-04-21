@@ -1,27 +1,27 @@
 from sklearn.linear_model import Lasso
 import pandas as pd
 
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import RobustScaler
 from config.database import FORECAST_DB_NAME, PRODUCTION_COLLECTION_NAME, WEATHER_COLLECTION_NAME
 from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
 from sklearn.model_selection import train_test_split
 from data_handling.transform import DataTransformer, PARAMETERS_NAME_MAP
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 SPLIT_RATIO = 0.80
-OBJECT = "C"
+OBJECT = "B"
 INPUT_FEATURES = ["shortwave_radiation",  'relative_humidity', 'pressure', 'rain',
-                  'wind_speed', "temperature", 'direct_normal_irradiance', 'direct_normal_irradiance_instant', 'direct_radiation', 'terrestrial_radiation', 'value_lag_1']
-LAGGED_FEATURES = ['value']
-LAG_STEPS = 1
-SELECTED_FEATURES = ['direct_radiation', 'value_lag_1']
+                  'wind_speed', "temperature", 'direct_normal_irradiance', 'direct_normal_irradiance_instant', 'direct_radiation', 'terrestrial_radiation']
+
+SELECTED_FEATURES = ['shortwave_radiation', 'terrestrial_radiation',
+                     'relative_humidity', 'pressure']
 
 HYPER_PARAMETERS = {
-    "alpha": [0.01, 0.1, 1, 10, 100],
+    "alpha": [0.001, 0.01, 0.1, 1, 10, 100],
     "max_iter": [50, 100, 500, 2000, 3000, 4000, 5000]
 }
 
@@ -43,14 +43,13 @@ merged_df = data_transformer.get_merged_df()
 
 
 def find_best_features():
-    data_transformer.add_lagged_features(LAGGED_FEATURES, LAG_STEPS)
     X = merged_df[INPUT_FEATURES]
     y = merged_df['value']
 
-    X_scaler = MinMaxScaler()
+    X_scaler = RobustScaler()
     X_scaled = X_scaler.fit_transform(X)
 
-    y_scaler = MinMaxScaler()
+    y_scaler = RobustScaler()
     y_scaled = y_scaler.fit_transform(y.values.reshape(-1, 1))
 
     # Split the data into training and testing sets
@@ -63,11 +62,11 @@ def find_best_features():
 
     feature_importance = lasso_model.coef_
 
-    new_column_names = [PARAMETERS_NAME_MAP.get(
+    translated_column_names = [PARAMETERS_NAME_MAP.get(
         col, col) for col in INPUT_FEATURES]
 
     feature_importance_df = pd.DataFrame({
-        "Feature": new_column_names,
+        "Feature": translated_column_names,
         "Importance": feature_importance
     })
 
@@ -86,22 +85,21 @@ def find_best_features():
 
 
 def find_best_hyperparameters():
-    data_transformer.add_lagged_features(LAGGED_FEATURES, LAG_STEPS)
     X = merged_df[SELECTED_FEATURES]
     y = merged_df['value']
 
-    X_scaler = MinMaxScaler()
+    X_scaler = RobustScaler()
     X_scaled = X_scaler.fit_transform(X)
 
-    y_scaler = MinMaxScaler()
+    y_scaler = RobustScaler()
     y_scaled = y_scaler.fit_transform(y.values.reshape(-1, 1))
 
     # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
         X_scaled, y_scaled, test_size=SPLIT_RATIO, random_state=42)
     lass_model = Lasso()
-    random_search = RandomizedSearchCV(
-        estimator=lass_model, param_distributions=HYPER_PARAMETERS, n_iter=35, cv=5, random_state=42, scoring="r2")
+    random_search = GridSearchCV(
+        estimator=lass_model, param_grid=HYPER_PARAMETERS, cv=5,  scoring="r2")
 
     random_search.fit(X_train, y_train)
     # Get the best parameters and best score
