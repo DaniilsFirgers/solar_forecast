@@ -20,7 +20,7 @@ from models.main import GRU, LSTM, RNN
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 SPLIT_RATIO = 0.80
-OBJECTS = ['A', 'B', 'C']
+OBJECTS = ['B', 'C']
 NUM_EPOCHS = 15000
 
 
@@ -29,15 +29,15 @@ evaluation_data = []
 MODELS: List[ModelWrapper] = [
     # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
     #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": 128, "layers": 1},
-    {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
-        'shortwave_radiation',
-        'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None},
-    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None},
-    # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-    #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": 128, "layers": 2},
+    # {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
+    #     'shortwave_radiation',
+    #     'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None},
+    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None},
+    {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
+                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 256, "C": 256}, "layers": {"A": 3, "B": 3, "C": 2}},
     # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-    #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": 128, "layers": 2},
+    #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 128, "C": 128}, "layers": {"A": 3, "B": 2, "C": 2}},
 ]
 
 for model in MODELS:
@@ -114,16 +114,19 @@ for model in MODELS:
             X_train, X_test, y_train, y_test, ground_truth_df = data_transformer.get_train_and_test(
                 X_scaled, y_scaled)
 
+            hidden_layers = model["hidden_layers"][object]
+            layers = model["layers"][object]
+
             nn_model = model["model"]
             if model["short_name"] == "lstm":
-                nn_model = LSTM(input_size=X_train.shape[1], hidden_size=model["hidden_layers"],
-                                num_layers=model["layers"], output_size=1)
+                nn_model = LSTM(input_size=X_train.shape[1], hidden_size=hidden_layers,
+                                num_layers=layers, output_size=1)
             elif model["short_name"] == "rnn":
-                nn_model = RNN(input_size=X_train.shape[1], hidden_size=model["hidden_layers"],
-                               num_layers=model["layers"], output_size=1)
+                nn_model = RNN(input_size=X_train.shape[1], hidden_size=hidden_layers,
+                               num_layers=layers, output_size=1)
             elif model["short_name"] == "gru":
-                nn_model = GRU(input_dim=X_train.shape[1], hidden_dim=model["hidden_layers"],
-                               num_layers=model["layers"], output_dim=1)
+                nn_model = GRU(input_dim=X_train.shape[1], hidden_dim=hidden_layers,
+                               num_layers=layers, output_dim=1)
 
             criterion = nn.MSELoss()
             optimizer = torch.optim.Adam(nn_model.parameters(), lr=0.001)
@@ -225,11 +228,12 @@ for metric in metrics:
     inter_group_margin = 0.5  # Space between groups
 
     plt.figure(figsize=(10, 6))
-    plt.bar(x, metric_data_A, width=bar_width, label='Saules parks “A”')
-    plt.bar(x + bar_width, metric_data_B,
-            width=bar_width, label='Saules parks “B”')
-    plt.bar(x + 2 * bar_width, metric_data_C,
-            width=bar_width, label='Saules parks “C”')
+    bars_a = plt.bar(x, metric_data_A, width=bar_width,
+                     label='Saules parks “A”')
+    bars_b = plt.bar(x + bar_width, metric_data_B,
+                     width=bar_width, label='Saules parks “B”')
+    bars_c = plt.bar(x + 2 * bar_width, metric_data_C,
+                     width=bar_width, label='Saules parks “C”')
 
     # Set labels, titles, and legends
     plt.xlabel('Model')
@@ -238,6 +242,12 @@ for metric in metrics:
     # Centering ticks under the middle bar of each group
     plt.xticks(x + group_width / 2 - bar_width / 2, models)
     plt.legend()
+
+    for bars in [bars_a, bars_b, bars_c]:
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval,
+                     round(yval, 2), ha='center', va='bottom')
 
     # Optional: Set x-axis limits to add some padding for clarity
     plt.xlim(-0.5, len(models) - 1 + group_width + inter_group_margin)
