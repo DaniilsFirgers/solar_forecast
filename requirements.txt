@@ -9,7 +9,6 @@ pandas
 plotly
 nbformat>=4.2.0 
 nbeats_pytorch
-tensorflow>=2.15.0
 pyarrow
 seaborn
 statsmodels
