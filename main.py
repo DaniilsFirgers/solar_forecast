@@ -15,8 +15,6 @@ from data_handling.transform import EarlyStopping, ModelType, PlotLoss, PlotPred
 from sklearn.linear_model import LinearRegression
 from typing import List
 from statsmodels.stats.stattools import durbin_watson
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
-
 from models.main import GRU, LSTM, RNN
 
 plt.style.use('ggplot')
@@ -29,17 +27,17 @@ NUM_EPOCHS = 15000
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
+    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
+    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": 128, "layers": 1},
     {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
         'shortwave_radiation',
         'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None},
     {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
         'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None},
-    {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": 128, "layers": 2},
-    {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-                                                      'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": 128, "layers": 2},
-    {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
-                                                      'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": 128, "layers": 1}
+    # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
+    #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": 128, "layers": 2},
+    # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
+    #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": 128, "layers": 2},
 ]
 
 for model in MODELS:
@@ -130,6 +128,9 @@ for model in MODELS:
             criterion = nn.MSELoss()
             optimizer = torch.optim.Adam(nn_model.parameters(), lr=0.001)
             model_type = ModelType.LSTM if model["short_name"] == "lstm" else ModelType.RNN
+
+            patience = 50
+
             early_stopping = EarlyStopping(
                 object_name=object, patience=50, min_delta=0.0001, model_type=model_type)
 
@@ -211,27 +212,34 @@ print(pivot_df)
 models = pivot_df['Model']
 metrics = ['R^2', 'MAE', 'RMSE']
 
+bar_width = 0.3
+
 for metric in metrics:
-    # Get the data for the current metric
     metric_data_A = pivot_df[f'{metric}_A']
     metric_data_B = pivot_df[f'{metric}_B']
     metric_data_C = pivot_df[f'{metric}_C']
 
-    # Set up the bar positions
-    x = range(len(models))
+    # Calculate positions for each set of bars
+    x = np.arange(len(models))  # positions for the model groups
+    group_width = 3 * bar_width  # The total width of a group (three bars)
+    inter_group_margin = 0.5  # Space between groups
 
-    # Plot the bars for each solar park separately
     plt.figure(figsize=(10, 6))
-    plt.bar(x, metric_data_A, width=0.4, label='Saules parks “A”')
-    plt.bar([i + 0.4 for i in x], metric_data_B,
-            width=0.4, label='Saules parks “B”')
-    plt.bar([i + 0.8 for i in x], metric_data_C,
-            width=0.4, label='Saules parks “C”')
+    plt.bar(x, metric_data_A, width=bar_width, label='Saules parks “A”')
+    plt.bar(x + bar_width, metric_data_B,
+            width=bar_width, label='Saules parks “B”')
+    plt.bar(x + 2 * bar_width, metric_data_C,
+            width=bar_width, label='Saules parks “C”')
 
-    # Add labels and title
+    # Set labels, titles, and legends
     plt.xlabel('Model')
     plt.ylabel(metric)
     plt.title(f'{metric} pēc modeļa un saules parka')
-    plt.xticks([i + 0.2 for i in x], models)
+    # Centering ticks under the middle bar of each group
+    plt.xticks(x + group_width / 2 - bar_width / 2, models)
     plt.legend()
+
+    # Optional: Set x-axis limits to add some padding for clarity
+    plt.xlim(-0.5, len(models) - 1 + group_width + inter_group_margin)
+
     plt.show()
