@@ -31,6 +31,7 @@ NUM_EPOCHS = 15000
 # 5. Write about GRU parameters choice
 # 6. MBE is negative - underestimation
 # 7. Adjusted R^2 description
+# 8. write ebout wright decay in optimizer
 
 
 evaluation_data = []
