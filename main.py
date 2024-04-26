@@ -24,8 +24,8 @@ OBJECTS = ['A', 'B', 'C']
 NUM_EPOCHS = 15000
 
 # TODO:
-# 1. Why i do not use MPE and MAPE -> too small values can lead to division by zero or to high values
-# 2. Individual chaoice for hidden layers and layers for each object
+# 1. Why i do not use MPE and MAPE -> too small values can lead to division by zero or to high values [X]
+# 2. Individual chaoice for hidden layers and layers for each object [X]
 # 3. Add 'month', 'day_of_week', 'hour' to analysis parameters
 # 4. Write about softplus activation function and why RELu is not used (dyinig relu problem and vanishing gradients
 # 5. Write about GRU parameters choice
@@ -36,15 +36,15 @@ NUM_EPOCHS = 15000
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
-    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0},
-    # {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
-    #     'shortwave_radiation',
-    #     'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-    #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 4}, "dropout": 0},
+    {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
+                                                      'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0},
+    {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
+        'shortwave_radiation',
+        'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
+    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
+                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 4}, "dropout": 0},
     {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0},
 ]
