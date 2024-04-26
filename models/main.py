@@ -28,7 +28,7 @@ class LSTM(nn.Module):
 
 
 class RNN(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, output_size):
+    def __init__(self, input_size, hidden_size, num_layers, output_size, dropout=0):
         super(RNN, self).__init__()
         # Hidden dimensions
         self.hidden_dim = hidden_size
@@ -41,7 +41,7 @@ class RNN(nn.Module):
         # (batch_dim, seq_dim, input_dim)
         # batch_dim = number of samples per batch
         self.rnn = nn.RNN(input_size, hidden_size, num_layers,
-                          batch_first=True)
+                          batch_first=True, dropout=dropout)
 
         # Readout layer
         self.fc = nn.Linear(hidden_size, output_size)
@@ -66,11 +66,12 @@ class RNN(nn.Module):
 
 
 class GRU(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_layers=1):
+    def __init__(self, input_dim, hidden_dim, output_dim, num_layers=1, droupout=0):
         super(GRU, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.gru = nn.GRU(input_dim, hidden_dim, num_layers,
+                          batch_first=True, dropout=droupout)
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):

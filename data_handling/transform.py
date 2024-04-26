@@ -14,6 +14,7 @@ from itertools import combinations
 from torch.utils.data import Dataset
 from typing import List, TypedDict
 from sklearn.linear_model import Lasso, LinearRegression
+import numpy as np
 
 
 @dataclasses.dataclass
@@ -234,6 +235,7 @@ class ModelWrapper(TypedDict):
     short_name: str
     hidden_layers: LayersConfig | None
     layers: LayersConfig | None
+    dropout: float | None
 
 
 PARAMETERS_NAME_MAP = {"value": "Ražošanas vērtības", "temperature": "Temperatūra", "relative_humidity": "Relatīvais mitrums", "wind_speed": "Vēja ātrums", "pressure": "Atmosfēras spiediens",
@@ -250,3 +252,16 @@ def generate_unique_feature_combinations(features):
             if sorted_combo not in unique_combinations:
                 unique_combinations.append(sorted_combo)
     return unique_combinations
+
+
+def mean_bias_error(actual, predicted):
+    """ Calculate the Mean Bias Error (MBE) between two arrays of predicted and actual values. """
+    predicted = np.array(predicted)
+    actual = np.array(actual)
+    differences = predicted - actual
+    mbe = np.mean(differences)
+    return mbe
+
+
+def adjusted_r_squared(r_squared, n, k):
+    return 1 - ((1 - r_squared) * (n - 1) / (n - k - 1))

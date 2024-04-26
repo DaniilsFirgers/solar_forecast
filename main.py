@@ -11,7 +11,7 @@ from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
 from sklearn.model_selection import train_test_split
-from data_handling.transform import EarlyStopping, ModelType, PlotLoss, PlotPredictions, DataTransformer, ModelWrapper
+from data_handling.transform import EarlyStopping, ModelType, PlotLoss, PlotPredictions, DataTransformer, ModelWrapper, mean_bias_error, adjusted_r_squared
 from sklearn.linear_model import LinearRegression
 from typing import List
 from statsmodels.stats.stattools import durbin_watson
@@ -20,24 +20,33 @@ from models.main import GRU, LSTM, RNN
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 SPLIT_RATIO = 0.80
-OBJECTS = ['B', 'C']
+OBJECTS = ['A', 'B', 'C']
 NUM_EPOCHS = 15000
+
+# TODO:
+# 1. Why i do not use MPE and MAPE -> too small values can lead to division by zero or to high values
+# 2. Individual chaoice for hidden layers and layers for each object
+# 3. Add 'month', 'day_of_week', 'hour' to analysis parameters
+# 4. Write about softplus activation function and why RELu is not used (dyinig relu problem and vanishing gradients
+# 5. Write about GRU parameters choice
+# 6. MBE is negative - underestimation
+# 7. Adjusted R^2 description
 
 
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
     # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
-    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": 128, "layers": 1},
+    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0},
     # {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
     #     'shortwave_radiation',
-    #     'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None},
+    #     'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
     # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None},
-    {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 256, "C": 256}, "layers": {"A": 3, "B": 3, "C": 2}},
-    # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-    #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 128, "C": 128}, "layers": {"A": 3, "B": 2, "C": 2}},
+    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
+    #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 4}, "dropout": 0},
+    {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
+                                                      'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0},
 ]
 
 for model in MODELS:
@@ -85,7 +94,7 @@ for model in MODELS:
         predictions = []
         ground_truth = []
         test_score = 0
-        train_score = 0
+        adjusted_test_score = 0
 
         if model["short_name"] == "lasso" or model["short_name"] == "linear_regression":
 
@@ -94,8 +103,11 @@ for model in MODELS:
             lr_model = model["model"]
 
             lr_model.fit(X_train, y_train)
-            train_score = lr_model.score(X_train, y_train)
+
             test_score = lr_model.score(X_test, y_test)
+            adjusted_test_score = adjusted_r_squared(
+                test_score, X_test.shape[0], X_test.shape[1]
+            )
             lr_preds = lr_model.predict(X_test)
             lr_preds = np.maximum(lr_preds, 0)
             residuals = (y_test - lr_preds).flatten()
@@ -116,26 +128,26 @@ for model in MODELS:
 
             hidden_layers = model["hidden_layers"][object]
             layers = model["layers"][object]
+            dropout = model["dropout"]
 
             nn_model = model["model"]
             if model["short_name"] == "lstm":
                 nn_model = LSTM(input_size=X_train.shape[1], hidden_size=hidden_layers,
-                                num_layers=layers, output_size=1)
+                                num_layers=layers, output_size=1, dropout=dropout)
             elif model["short_name"] == "rnn":
                 nn_model = RNN(input_size=X_train.shape[1], hidden_size=hidden_layers,
-                               num_layers=layers, output_size=1)
+                               num_layers=layers, output_size=1, dropout=dropout)
             elif model["short_name"] == "gru":
                 nn_model = GRU(input_dim=X_train.shape[1], hidden_dim=hidden_layers,
-                               num_layers=layers, output_dim=1)
+                               num_layers=layers, output_dim=1, droupout=dropout)
 
             criterion = nn.MSELoss()
-            optimizer = torch.optim.Adam(nn_model.parameters(), lr=0.001)
+            optimizer = torch.optim.Adam(
+                nn_model.parameters(), lr=0.001, weight_decay=1e-5)
             model_type = ModelType.LSTM if model["short_name"] == "lstm" else ModelType.RNN
 
-            patience = 50
-
             early_stopping = EarlyStopping(
-                object_name=object, patience=50, min_delta=0.0001, model_type=model_type)
+                object_name=object, patience=75, min_delta=0.0001, model_type=model_type)
 
             for epoch in range(NUM_EPOCHS):
                 outputs = nn_model(X_train.unsqueeze(1)).squeeze()
@@ -154,12 +166,15 @@ for model in MODELS:
                     y_test.numpy().reshape(-1, 1)).flatten()
 
                 r2 = r2_score(y_test_original, test_outputs)
+                adjusted_r2 = adjusted_r_squared(
+                    r2, X_test.shape[0], X_test.shape[1])
                 if test_score < r2:
                     test_score = r2
+                    adjusted_test_score = adjusted_r2
 
                 if (epoch + 1) % 10 == 0:
                     print(
-                        f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {train_loss.item():.4f}, Test Loss: {test_loss.item():.4f}, Test R2: {r2:.4f}")
+                        f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {train_loss.item():.4f}, Test Loss: {test_loss.item():.4f}, Test R2: {r2:.4f}, Adjusted R2: {adjusted_r2:.4f}")
 
                 test_losses.append(test_loss.detach().numpy())
                 train_losses.append(train_loss.detach().numpy())
@@ -182,16 +197,17 @@ for model in MODELS:
 
         rmse = mean_squared_error(ground_truth, predictions, squared=False)
         mae = mean_absolute_error(ground_truth, predictions)
+        mbe = mean_bias_error(ground_truth, predictions)
         evaluation_data.append({
             'Model': model["name"],
             'Solar Park': object,
             'R^2': test_score,
             'MAE': mae,
-            'RMSE': rmse
+            'RMSE': rmse,
+            'MBE': mbe
         })
 
         print("Test R^2:", test_score)
-        print("Train R^2:", train_score)
         print("Mean Squared Error:", rmse)
         print("Mean Absolute Error:", mae)
         # results_plot.create_plot()
@@ -213,7 +229,7 @@ pivot_df.reset_index(inplace=True)
 print(pivot_df)
 
 models = pivot_df['Model']
-metrics = ['R^2', 'MAE', 'RMSE']
+metrics = ['R^2', 'MAE', 'RMSE', 'MBE']
 
 bar_width = 0.3
 
@@ -247,7 +263,7 @@ for metric in metrics:
         for bar in bars:
             yval = bar.get_height()
             plt.text(bar.get_x() + bar.get_width()/2, yval,
-                     round(yval, 2), ha='center', va='bottom')
+                     round(yval, 3), ha='center', va='bottom')
 
     # Optional: Set x-axis limits to add some padding for clarity
     plt.xlim(-0.5, len(models) - 1 + group_width + inter_group_margin)
