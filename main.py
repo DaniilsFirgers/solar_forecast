@@ -20,7 +20,7 @@ from models.main import GRU, LSTM, RNN
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 SPLIT_RATIO = 0.80
-OBJECTS = ['A', 'B', 'C']
+OBJECTS = ['B', 'C']
 NUM_EPOCHS = 15000
 
 # TODO:
@@ -32,22 +32,23 @@ NUM_EPOCHS = 15000
 # 6. MBE is negative - underestimation
 # 7. Adjusted R^2 description
 # 8. write ebout wright decay in optimizer
+# 9. Get correct datetimes for test data
 
 
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
-                                                      'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0},
-    {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
-        'shortwave_radiation',
-        'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
+    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0},
+    # {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
+    #     'shortwave_radiation',
+    #     'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
     {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 4}, "dropout": 0},
-    {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-                                                      'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0},
+                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 4}, "dropout": 0, "negative_slope": {"A": 1e-5, "B": 1e-7, "C": 1e-5}},
+    # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
+    #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
 ]
 
 for model in MODELS:
@@ -130,14 +131,15 @@ for model in MODELS:
             hidden_layers = model["hidden_layers"][object]
             layers = model["layers"][object]
             dropout = model["dropout"]
+            negative_slope = model["negative_slope"][object]
 
             nn_model = model["model"]
             if model["short_name"] == "lstm":
                 nn_model = LSTM(input_size=X_train.shape[1], hidden_size=hidden_layers,
-                                num_layers=layers, output_size=1, dropout=dropout)
+                                num_layers=layers, output_size=1, dropout=dropout, negative_slope=negative_slope)
             elif model["short_name"] == "rnn":
                 nn_model = RNN(input_size=X_train.shape[1], hidden_size=hidden_layers,
-                               num_layers=layers, output_size=1, dropout=dropout)
+                               num_layers=layers, output_size=1, dropout=dropout, negative_slope=negative_slope)
             elif model["short_name"] == "gru":
                 nn_model = GRU(input_dim=X_train.shape[1], hidden_dim=hidden_layers,
                                num_layers=layers, output_dim=1, droupout=dropout)
@@ -155,6 +157,10 @@ for model in MODELS:
                 optimizer.zero_grad()
                 train_loss: torch.Tensor = criterion(outputs, y_train)
                 train_loss.backward()
+
+                # TODO: experimnet with different clipping values fro LSTM and GRU
+                if model["short_name"] == "rnn":
+                    torch.nn.utils.clip_grad_norm_(nn_model.parameters(), 10.0)
                 optimizer.step()
 
                 with torch.no_grad():
@@ -211,7 +217,7 @@ for model in MODELS:
         print("Test R^2:", test_score)
         print("Mean Squared Error:", rmse)
         print("Mean Absolute Error:", mae)
-        # results_plot.create_plot()
+        results_plot.create_plot()
 
 
 evaluation_df = pd.DataFrame(evaluation_data)
