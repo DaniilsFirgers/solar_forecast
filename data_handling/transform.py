@@ -225,7 +225,7 @@ class DataTransformer:
         return X_train, X_test, y_train, y_test, ground_truth_test
 
 
-LayersConfig = dict[str, int]
+ObjectConfig = dict[str, int]
 
 
 class ModelWrapper(TypedDict):
@@ -233,9 +233,10 @@ class ModelWrapper(TypedDict):
     model: Lasso | LinearRegression | None
     input_features: List[str]
     short_name: str
-    hidden_layers: LayersConfig | None
-    layers: LayersConfig | None
+    hidden_layers: ObjectConfig | None
+    layers: ObjectConfig | None
     dropout: float | None
+    negative_slope: ObjectConfig | None
 
 
 PARAMETERS_NAME_MAP = {"value": "Ražošanas vērtības", "temperature": "Temperatūra", "relative_humidity": "Relatīvais mitrums", "wind_speed": "Vēja ātrums", "pressure": "Atmosfēras spiediens",
