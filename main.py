@@ -30,22 +30,22 @@ NUM_EPOCHS = 15000
 # 4. Write about softplus activation function and why RELu is not used (dyinig relu problem and vanishing gradients) [X]
 # 5. Write about GRU parameters choice
 # 7. Adjusted R^2 description
-# 8. write ebout wright decay in optimizer !
+
 # 9. Get correct datetimes for test data !
 
 
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation',
-    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0},
+    {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'terrestrial_radiation',
+                                                      'pressure', 'relative_humidity', 'temperature', 'rain', 'month', 'day_of_week', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
     # {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
     #     'shortwave_radiation',
     #     'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
     # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
     #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
-    {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 4}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-4, "C": 1e-5}},
+    # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
+    #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 32}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-4, "C": 1e-5}},
     # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
     #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
 ]
@@ -141,11 +141,11 @@ for model in MODELS:
                                num_layers=layers, output_size=1, dropout=dropout, negative_slope=negative_slope)
             elif model["short_name"] == "gru":
                 nn_model = GRU(input_dim=X_train.shape[1], hidden_dim=hidden_layers,
-                               num_layers=layers, output_dim=1, droupout=dropout)
+                               num_layers=layers, output_dim=1, droupout=dropout, negative_slope=negative_slope)
 
             criterion = nn.MSELoss()
             optimizer = torch.optim.Adam(
-                nn_model.parameters(), lr=0.001, weight_decay=1e-5)
+                nn_model.parameters(), lr=0.001)
             model_type = ModelType.LSTM if model["short_name"] == "lstm" else ModelType.RNN
 
             early_stopping = EarlyStopping(

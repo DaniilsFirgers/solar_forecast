@@ -58,10 +58,11 @@ class RNN(nn.Module):
 
 
 class GRU(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, num_layers=1, droupout=0):
+    def __init__(self, input_dim, hidden_dim, output_dim, negative_slope, num_layers=1, droupout=0):
         super(GRU, self).__init__()
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
+        self.negative_slope = negative_slope
         self.gru = nn.GRU(input_dim, hidden_dim, num_layers,
                           batch_first=True, dropout=droupout)
         self.fc = nn.Linear(hidden_dim, output_dim)
@@ -77,5 +78,5 @@ class GRU(nn.Module):
 
         # Decode the hidden state of the last time step
         out = self.fc(out[:, -1, :])
-        out = F.softplus(out, beta=35, threshold=1)
+        out = F.leaky_relu(out, self.negative_slope)
         return out
