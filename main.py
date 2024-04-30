@@ -26,12 +26,13 @@ NUM_EPOCHS = 15000
 # TODO:
 # 1. Why i do not use MPE and MAPE -> too small values can lead to division by zero or to high values [X]
 # 2. Individual chaoice for hidden layers and layers for each object [X]
-# 3. Add 'month', 'day_of_week', 'hour' to analysis parameters !
+# 3. Add 'month', 'day_of_week', 'hour' to analysis parameters ! [X]
 # 4. Write about softplus activation function and why RELu is not used (dyinig relu problem and vanishing gradients) [X]
 # 5. Write about GRU parameters choice
 # 7. Adjusted R^2 description
-
+# 8. Add a bit of stuff about RNN
 # 9. Get correct datetimes for test data !
+# 10 Table of abbreviations
 
 
 evaluation_data = []
