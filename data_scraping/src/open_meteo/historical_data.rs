@@ -145,7 +145,7 @@ impl RequestHandler {
     fn get_end_date(&self) -> DateTime<Utc> {
         let mut utc_now: DateTime<Utc> = Utc::now();
         utc_now = utc_now.with_minute(0).unwrap().with_second(0).unwrap();
-        let two_days_ago = utc_now - Duration::try_days(8).unwrap();
+        let two_days_ago = utc_now - Duration::try_days(2).unwrap();
 
         two_days_ago
     }

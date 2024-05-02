@@ -42,15 +42,15 @@ evaluation_data = []
 MODELS: List[ModelWrapper] = [
     # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'terrestrial_radiation',
     #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
-    {"name": "Lasso", "model": Lasso(alpha=0.1, max_iter=100, positive=True), "input_features": [
-        'shortwave_radiation',
-        'relative_humidity', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "Lasso", "model": Lasso(alpha=0.1, max_iter=100, positive=True), "input_features": [
+    #     'shortwave_radiation',
+    #     'relative_humidity', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
     # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
     #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 32}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-4, "C": 1e-5}},
-    # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-    #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
+    {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
+                                                      'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
 ]
 
 for model in MODELS:
