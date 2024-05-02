@@ -88,12 +88,12 @@ class EarlyStopping:
         self.model_type = model_type
         self.save_dir = "trained_models/"
         self.object_name = object_name
+        self.best_weights_path = None
 
     def update(self, val_loss, model):
         if val_loss < self.best_loss - self.min_delta:
             self.best_loss = val_loss
-            if self.model_type != ModelType.NBEATS:
-                self.best_model_weights = copy.deepcopy(model.state_dict())
+            self.best_model_weights = copy.deepcopy(model.state_dict())
             self.counter = 0
         else:
             self.counter += 1
@@ -107,8 +107,9 @@ class EarlyStopping:
         if self.best_model_weights is not None:
             if not os.path.exists(self.save_dir):
                 os.makedirs(self.save_dir)
-            torch.save(self.best_model_weights, os.path.join(
-                self.save_dir, f'best_{self.model_type.value}_weights_{self.object_name}.pt'))
+            self.best_weights_path = os.path.join(
+                self.save_dir, f'best_{self.model_type.value}_weights_{self.object_name}.pt')
+            torch.save(self.best_model_weights, self.best_weights_path)
 
 
 class PlotLoss():
@@ -175,11 +176,13 @@ class PlotPredictions():
 
 
 class DataTransformer:
-    def __init__(self, historical_production_data: DataFrame, weather_data: DataFrame, test_size=0.25, random_state=42):
+    def __init__(self, historical_production_data: DataFrame, weather_data: DataFrame, test_ratio: int, train_ratio: int, valiation_ratio: int, random_state=42):
         self.historical_production_data = historical_production_data
         self.weather_data = weather_data
         self.merged_dataframe = None
-        self.test_size = test_size
+        self.test_size = test_ratio
+        self.train_size = train_ratio
+        self.validation_size = valiation_ratio
         self.random_state = random_state
 
     def add_lagged_features(self, lagged_features: list, lag_steps: int):
@@ -209,9 +212,12 @@ class DataTransformer:
 
         return self.merged_dataframe
 
-    def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, any]:
+    def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         X_train, X_test, y_train, y_test = train_test_split(
-            X_scaled, y_scaled, test_size=self.test_size,  random_state=self.random_state)
+            X_scaled, y_scaled, test_size=1-self.train_size,  random_state=self.random_state)
+
+        X_val, X_test, y_val, y_test = train_test_split(
+            X_test, y_test, test_size=self.test_size/(self.test_size + self.validation_size),  random_state=self.random_state)
 
         X_train = torch.from_numpy(X_train).float()
         y_train = torch.squeeze(torch.from_numpy(y_train).float())
@@ -219,10 +225,13 @@ class DataTransformer:
         X_test = torch.from_numpy(X_test).float()
         y_test = torch.squeeze(torch.from_numpy(y_test).float())
 
-        split_index = int(len(X_scaled) * (1 - self.test_size))
-        ground_truth_test = self.merged_dataframe['value'].iloc[split_index:]
+        X_val = torch.from_numpy(X_val).float()
+        y_val = torch.squeeze(torch.from_numpy(y_val).float())
 
-        return X_train, X_test, y_train, y_test, ground_truth_test
+        # split_index = int(len(X_scaled) * (1 - self.test_size))
+        # ground_truth_test = self.merged_dataframe['value'].iloc[split_index:]
+
+        return X_train, X_test, X_val, y_val, y_train, y_test
 
 
 ObjectConfig = dict[str, int]
