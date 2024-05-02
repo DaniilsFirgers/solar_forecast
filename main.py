@@ -40,17 +40,17 @@ NUM_EPOCHS = 15000
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'terrestrial_radiation',
-                                                      'pressure', 'relative_humidity', 'temperature', 'rain', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
-    # {"name": "Lasso", "model": Lasso(alpha=0.01, max_iter=1000, positive=True), "input_features": [
-    #     'shortwave_radiation',
-    #     'relative_humidity', 'month', 'day_of_week', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'month', 'day_of_week', 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'terrestrial_radiation',
+    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
+    {"name": "Lasso", "model": Lasso(alpha=0.1, max_iter=100, positive=True), "input_features": [
+        'shortwave_radiation',
+        'relative_humidity', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
+    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
     # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
     #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 32}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-4, "C": 1e-5}},
-    {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-                                                      'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
+    # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
+    #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
 ]
 
 for model in MODELS:
@@ -98,29 +98,47 @@ for model in MODELS:
 
         predictions = []
         ground_truth = []
-        test_score = 0
-        adjusted_test_score = 0
+        val_score = 0
+        adjusted_val_test_score = 0
 
         if model["short_name"] == "lasso" or model["short_name"] == "linear_regression":
 
             X_train, X_test, y_train, y_test = train_test_split(
-                X_scaled, y_scaled, test_size=TRAIN_SPLIT, random_state=42)
+                X_scaled, y_scaled, test_size=1-TRAIN_SPLIT, random_state=42)
+
+            X_val, X_test, y_val, y_test = train_test_split(
+                X_test, y_test, test_size=TEST_SPLIT/(TEST_SPLIT + VALIDATION_SPLIT),  random_state=42)
             lr_model = model["model"]
 
             lr_model.fit(X_train, y_train)
 
+            lr_evals = lr_model.predict(X_val)
+
+            score = lr_model.score(X_val, y_val)
+            adjusted_score = adjusted_r_squared(
+                val_score, X_val.shape[0], X_val.shape[1]
+            )
+            print(f'R^2: {score}')
+
+            lr_evals = np.maximum(lr_evals, 0)
+            residuals = (y_val - lr_evals).flatten()
+            adjusted_val_test_score = durbin_watson(residuals)
+            print(f'Durbin-Watson score: {adjusted_val_test_score}')
+
+            lr_test = lr_model.predict(X_test)
+            lr_test = np.maximum(lr_test, 0)
             test_score = lr_model.score(X_test, y_test)
             adjusted_test_score = adjusted_r_squared(
                 test_score, X_test.shape[0], X_test.shape[1]
             )
-            lr_preds = lr_model.predict(X_test)
-            lr_preds = np.maximum(lr_preds, 0)
-            residuals = (y_test - lr_preds).flatten()
-            durbin_watson_score = durbin_watson(residuals)
-            print(f'Durbin-Watson score: {durbin_watson_score}')
+            residuals = (y_test - lr_test).flatten()
+            durbin_watson_test_score = durbin_watson(residuals)
+
+            print(f'Test R^2: {test_score}')
+            print(f'Test Durbin-Watson score: {durbin_watson_test_score}')
 
             predictions = y_scaler.inverse_transform(
-                lr_preds.reshape(-1, 1))
+                lr_test.reshape(-1, 1))
             ground_truth = y_scaler.inverse_transform(
                 y_test.reshape(-1, 1))
 
@@ -198,27 +216,26 @@ for model in MODELS:
             # TODO: save plot here
             loss_plot.create_plot()
 
+            nn_model.load_state_dict(torch.load(
+                early_stopping.best_weights_path))
+
+            nn_model.eval()
+            with torch.no_grad():
+                eval_outputs = nn_model(X_test.unsqueeze(1)).squeeze()
+                eval_outputs = y_scaler.inverse_transform(
+                    eval_outputs.reshape(-1, 1)).flatten()
+                y_val_original = y_scaler.inverse_transform(
+                    y_test.numpy().reshape(-1, 1)).flatten()
+
+                val_score = r2_score(y_val_original, eval_outputs)
+                adjusted_r2 = adjusted_r_squared(
+                    val_score, X_test.shape[0], X_test.shape[1])
+
+                predictions = eval_outputs
+                ground_truth = y_val_original
+
         results_plot = PlotPredictions(model["name"], object_name=object, title=results_plot_title, save_path=results_save_path, ground_truth=ground_truth_df,
                                        x_data=ground_truth, y_data=predictions)
-
-        print("Evaluation data:", early_stopping.best_weights_path)
-        nn_model.load_state_dict(torch.load(
-            early_stopping.best_weights_path))
-
-        nn_model.eval()
-        with torch.no_grad():
-            eval_outputs = nn_model(X_test.unsqueeze(1)).squeeze()
-            eval_outputs = y_scaler.inverse_transform(
-                eval_outputs.reshape(-1, 1)).flatten()
-            y_val_original = y_scaler.inverse_transform(
-                y_test.numpy().reshape(-1, 1)).flatten()
-
-            test_score = r2_score(y_val_original, eval_outputs)
-            adjusted_r2 = adjusted_r_squared(
-                test_score, X_test.shape[0], X_test.shape[1])
-
-            predictions = eval_outputs
-            ground_truth = y_val_original
 
         rmse = mean_squared_error(ground_truth, predictions, squared=False)
         mae = mean_absolute_error(ground_truth, predictions)
@@ -226,13 +243,13 @@ for model in MODELS:
         evaluation_data.append({
             'Model': model["name"],
             'Solar Park': object,
-            'R^2': test_score,
+            'R^2': val_score,
             'MAE': mae,
             'RMSE': rmse,
             'MBE': mbe
         })
 
-        print("Test R^2:", test_score)
+        print("Test R^2:", val_score)
         print("Mean Squared Error:", rmse)
         print("Mean Absolute Error:", mae)
         # results_plot.create_plot()
