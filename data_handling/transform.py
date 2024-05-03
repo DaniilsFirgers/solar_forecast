@@ -141,26 +141,23 @@ class PlotLoss():
 
 
 class PlotPredictions():
-    def __init__(self, model_name: str, object_name: str, title: str, save_path: str, ground_truth: DataFrame,  x_label='Patiesās vērtībās', y_label='Prognozetas vērtībās',  fig_size=(10, 5), x_data: list = [], y_data: list = [],  x_color='blue', y_color='green'):
+    def __init__(self, model_name: str, object_name: str, title: str, save_path: str, data: DataFrame | None, x_label='Patiesās vērtībās', y_label='Prognozetas vērtībās',  fig_size=(10, 5),  x_color='blue', y_color='green'):
         self.model_name = model_name
         self.object_name = object_name
         self.fig_size = fig_size
-        self.x_data = x_data
-        self.y_data = y_data
         self.x_label = x_label
         self.y_label = y_label
         self.title = title
         self.save_path = save_path
         self.x_color = x_color
         self.y_color = y_color
-        self.ground_truth = ground_truth
+        self.data = data
 
     def create_plot(self):
-        index_array = self.ground_truth.index.to_numpy()
         plt.figure(figsize=self.fig_size)
-        plt.plot(index_array, self.x_data,
+        plt.plot(self.data.index, self.data["value"],
                  label=self.x_label, color=self.x_color)
-        plt.plot(index_array, self.y_data,
+        plt.plot(self.data.index, self.data["predictions"],
                  label=self.y_label, color=self.y_color)
         plt.title(
             self.title)
@@ -194,7 +191,7 @@ class DataTransformer:
         # Drop rows with NaN values resulted from shifting
         self.merged_dataframe.dropna(inplace=True)
 
-    def get_merged_df(self) -> DataFrame:
+    def get_merged_df(self) -> tuple[DataFrame, DataFrame]:
         self.historical_production_data['start_time'] = pd.to_datetime(
             self.historical_production_data['start_time'])
         self.weather_data['start_time'] = pd.to_datetime(
@@ -208,9 +205,10 @@ class DataTransformer:
         self.merged_dataframe['day_of_week'] = self.merged_dataframe['start_time'].dt.dayofweek
         self.merged_dataframe['hour'] = self.merged_dataframe['start_time'].dt.hour
 
-        self.merged_dataframe.set_index("start_time", inplace=True)
+        start_time_index = self.merged_dataframe.reset_index()[["start_time"]]
+        self.merged_dataframe.reset_index(inplace=True)
 
-        return self.merged_dataframe
+        return self.merged_dataframe, start_time_index
 
     def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         X_train, X_test, y_train, y_test = train_test_split(
