@@ -210,26 +210,26 @@ class DataTransformer:
 
         return self.merged_dataframe, start_time_index
 
-    def get_train_and_test(self, X_scaled: ndarray, y_scaled: ndarray) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def get_train_and_test_data(self, X: ndarray, y: ndarray) -> tuple[ndarray, ndarray, ndarray, ndarray, ndarray, ndarray]:
         X_train, X_test, y_train, y_test = train_test_split(
-            X_scaled, y_scaled, test_size=1-self.train_size,  random_state=self.random_state)
+            X, y, test_size=1-self.train_size, shuffle=False,  random_state=self.random_state)
 
         X_val, X_test, y_val, y_test = train_test_split(
-            X_test, y_test, test_size=self.test_size/(self.test_size + self.validation_size),  random_state=self.random_state)
-
-        X_train = torch.from_numpy(X_train).float()
-        y_train = torch.squeeze(torch.from_numpy(y_train).float())
-
-        X_test = torch.from_numpy(X_test).float()
-        y_test = torch.squeeze(torch.from_numpy(y_test).float())
-
-        X_val = torch.from_numpy(X_val).float()
-        y_val = torch.squeeze(torch.from_numpy(y_val).float())
-
-        # split_index = int(len(X_scaled) * (1 - self.test_size))
-        # ground_truth_test = self.merged_dataframe['value'].iloc[split_index:]
+            X_test, y_test, test_size=self.test_size/(self.test_size + self.validation_size), shuffle=False,  random_state=self.random_state)
 
         return X_train, X_test, X_val, y_val, y_train, y_test
+
+    def convert_train_test_data_to_tensors(self, X_train_scaled, X_val_scaled, X_test_scaled, y_train_scaled, y_val_scaled, y_test_scaled) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        X_train = torch.from_numpy(X_train_scaled).float()
+        y_train = torch.squeeze(torch.from_numpy(y_train_scaled).float())
+
+        X_test = torch.from_numpy(X_test_scaled).float()
+        y_test = torch.squeeze(torch.from_numpy(y_test_scaled).float())
+
+        X_val = torch.from_numpy(X_val_scaled).float()
+        y_val = torch.squeeze(torch.from_numpy(y_val_scaled).float())
+
+        return X_train, X_val, X_test, y_train, y_val, y_test
 
 
 ObjectConfig = dict[str, int]

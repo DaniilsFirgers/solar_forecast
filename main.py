@@ -19,11 +19,11 @@ from models.main import GRU, LSTM, RNN
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
-TRAIN_SPLIT = 0.70
-VALIDATION_SPLIT = 0.20
+TRAIN_SPLIT = 0.80
+VALIDATION_SPLIT = 0.10
 TEST_SPLIT = 0.10
-OBJECTS = ['B', 'C']
-NUM_EPOCHS = 15000
+OBJECTS = ['A', 'B', 'C']
+NUM_EPOCHS = 700
 
 # TODO:
 # 1. Why i do not use MPE and MAPE -> too small values can lead to division by zero or to high values [X]
@@ -40,17 +40,17 @@ NUM_EPOCHS = 15000
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'terrestrial_radiation',
-    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'hour'], "short_name": "gru", "hidden_layers": {"A": 256, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
+    {"name": "GRU", "model": None, "input_features": ['direct_radiation',
+                                                      'pressure', 'relative_humidity', 'temperature', 'rain', 'hour'], "short_name": "gru", "hidden_layers": {"A": 32, "B": 128, "C": 64}, "layers": {"A": 4, "B": 3, "C": 4}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
     {"name": "Lasso", "model": Lasso(alpha=0.1, max_iter=100, positive=True), "input_features": [
         'shortwave_radiation',
         'relative_humidity', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-    #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'month', 'day_of_week', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 256, "B": 64, "C": 32}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-4, "C": 1e-5}},
-    # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-    #                                                   'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 256, "B": 64, "C": 64}, "layers": {"A": 2, "B": 2, "C": 2}, "dropout": 0, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
+    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
+                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
+    {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
+                                                      'temperature', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 128, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0.1, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
 ]
 
 for model in MODELS:
@@ -157,8 +157,21 @@ for model in MODELS:
             loss_plot_title = f'{model["name"]} modeļa apmācības un validācijas zaudējumi {object} objektam'
             loss_save_path = f'plots/{model["name"]}-{object}-loss.png'
 
-            X_train, X_test, X_val, y_val, y_train, y_test = data_transformer.get_train_and_test(
-                X_test_scaled, y_train_scaled)
+            X_train, X_test, X_val, y_val, y_train, y_test = data_transformer.get_train_and_test_data(
+                X, y)
+
+            X_test_scaled = X_scaler.fit_transform(X_test)
+            X_train_scaled = X_scaler.transform(X_train)
+            X_val_scaled = X_scaler.transform(X_val)
+
+            y_train_scaled = y_scaler.fit_transform(
+                y_train.values.reshape(-1, 1))
+
+            y_val_scaled = y_scaler.transform(y_val.values.reshape(-1, 1))
+            y_test_scaled = y_scaler.transform(y_test.values.reshape(-1, 1))
+
+            X_train_tensor, X_val_tensor, X_test_tensor, y_train_tensor, y_val_tensor, y_test_tensor = data_transformer.convert_train_test_data_to_tensors(
+                X_train_scaled, X_val_scaled, X_test_scaled, y_train_scaled, y_val_scaled, y_test_scaled)
 
             hidden_layers = model["hidden_layers"][object]
             layers = model["layers"][object]
@@ -167,27 +180,27 @@ for model in MODELS:
 
             nn_model = model["model"]
             if model["short_name"] == "lstm":
-                nn_model = LSTM(input_size=X_train.shape[1], hidden_size=hidden_layers,
+                nn_model = LSTM(input_size=X_train_tensor.shape[1], hidden_size=hidden_layers,
                                 num_layers=layers, output_size=1, dropout=dropout, negative_slope=negative_slope)
             elif model["short_name"] == "rnn":
-                nn_model = RNN(input_size=X_train.shape[1], hidden_size=hidden_layers,
+                nn_model = RNN(input_size=X_train_tensor.shape[1], hidden_size=hidden_layers,
                                num_layers=layers, output_size=1, dropout=dropout, negative_slope=negative_slope)
             elif model["short_name"] == "gru":
-                nn_model = GRU(input_dim=X_train.shape[1], hidden_dim=hidden_layers,
+                nn_model = GRU(input_dim=X_train_tensor.shape[1], hidden_dim=hidden_layers,
                                num_layers=layers, output_dim=1, droupout=dropout, negative_slope=negative_slope)
 
             criterion = nn.MSELoss()
             optimizer = torch.optim.Adam(
-                nn_model.parameters(), lr=0.001)
+                nn_model.parameters(), lr=0.0005)
             model_type = ModelType.LSTM if model["short_name"] == "lstm" else ModelType.RNN
 
             early_stopping = EarlyStopping(
-                object_name=object, patience=50, min_delta=0.001, model_type=model_type)
+                object_name=object, patience=150, min_delta=0.001, model_type=model_type)
 
             for epoch in range(NUM_EPOCHS):
-                outputs = nn_model(X_train.unsqueeze(1)).squeeze()
+                outputs = nn_model(X_train_tensor.unsqueeze(1)).squeeze()
                 optimizer.zero_grad()
-                train_loss: torch.Tensor = criterion(outputs, y_train)
+                train_loss: torch.Tensor = criterion(outputs, y_train_tensor)
                 train_loss.backward()
 
                 # TODO: experimnet with different clipping values fro LSTM and GRU
@@ -197,13 +210,15 @@ for model in MODELS:
 
                 nn_model.eval()
                 with torch.no_grad():
-                    eval_outputs = nn_model(X_val.unsqueeze(1)).squeeze()
-                    eval_loss: torch.Tensor = criterion(eval_outputs, y_val)
+                    eval_outputs = nn_model(
+                        X_val_tensor.unsqueeze(1)).squeeze()
+                    eval_loss: torch.Tensor = criterion(
+                        eval_outputs, y_val_tensor)
 
                 eval_outputs = y_scaler.inverse_transform(
                     eval_outputs.reshape(-1, 1)).flatten()
                 y_val_original = y_scaler.inverse_transform(
-                    y_val.numpy().reshape(-1, 1)).flatten()
+                    y_val_tensor.numpy().reshape(-1, 1)).flatten()
 
                 r2 = r2_score(y_val_original, eval_outputs)
                 adjusted_r2 = adjusted_r_squared(
@@ -217,9 +232,9 @@ for model in MODELS:
                 train_losses.append(train_loss.detach().numpy())
 
                 early_stopping.update(eval_loss.item(), nn_model)
-                if early_stopping.should_stop():
-                    print(f'Early stopping at epoch {epoch}')
-                    break
+                # if early_stopping.should_stop():
+                #     print(f'Early stopping at epoch {epoch}')
+                #     break
 
             early_stopping.save_best_model_weights()
             loss_plot = PlotLoss(model["name"], object_name=object, title=loss_plot_title, save_path=loss_save_path,
@@ -232,21 +247,21 @@ for model in MODELS:
 
             nn_model.eval()
             with torch.no_grad():
-                eval_outputs = nn_model(X_test.unsqueeze(1)).squeeze()
-                eval_outputs = y_scaler.inverse_transform(
-                    eval_outputs.reshape(-1, 1)).flatten()
+                test_outputs = nn_model(X_test_tensor.unsqueeze(1)).squeeze()
+                test_outputs = y_scaler.inverse_transform(
+                    test_outputs.reshape(-1, 1)).flatten()
                 y_val_original = y_scaler.inverse_transform(
-                    y_test.numpy().reshape(-1, 1)).flatten()
+                    y_test_tensor.numpy().reshape(-1, 1)).flatten()
 
-                test_score = r2_score(y_val_original, eval_outputs)
+                test_score = r2_score(y_val_original, test_outputs)
                 adjusted_r2 = adjusted_r_squared(
                     test_score, X_test.shape[0], X_test.shape[1])
 
-                predictions = eval_outputs
+                predictions = test_outputs
                 ground_truth = y_val_original
 
-        results_plot = PlotPredictions(model["name"], object_name=object, title=results_plot_title, save_path=results_save_path,
-                                       data=predictions_df)
+        # results_plot = PlotPredictions(model["name"], object_name=object, title=results_plot_title, save_path=results_save_path,
+        #                                data=predictions_df)
 
         rmse = mean_squared_error(ground_truth, predictions, squared=False)
         mae = mean_absolute_error(ground_truth, predictions)
@@ -264,7 +279,7 @@ for model in MODELS:
         print("Mean Squared Error:", rmse)
         print("Mean Absolute Error:", mae)
         print("Mean Bias Error:", mbe)
-        results_plot.create_plot()
+        # results_plot.create_plot()
 
 
 evaluation_df = pd.DataFrame(evaluation_data)
