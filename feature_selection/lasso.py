@@ -9,13 +9,17 @@ import matplotlib
 from sklearn.model_selection import train_test_split
 from data_handling.transform import DataTransformer, PARAMETERS_NAME_MAP
 from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import RobustScaler
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 SPLIT_RATIO = 0.80
 OBJECT = "B"
+TRAIN_SPLIT = 0.70
+VALIDATION_SPLIT = 0.15
+TEST_SPLIT = 0.15
 INPUT_FEATURES = ["shortwave_radiation",  'relative_humidity', 'pressure', 'rain',
-                  'wind_speed', "temperature", 'direct_normal_irradiance', 'direct_normal_irradiance_instant', 'direct_radiation', 'terrestrial_radiation']
+                  'wind_speed', "temperature", 'direct_normal_irradiance', 'direct_radiation', 'terrestrial_radiation']
 
 SELECTED_FEATURES = ['shortwave_radiation', 'terrestrial_radiation',
                      'relative_humidity', 'pressure']
@@ -37,26 +41,28 @@ if historical_data is None or weather_data is None:
     print("Error retrieving data from MongoDB.")
     exit(1)
 
-data_transformer = DataTransformer(historical_data, weather_data)
+data_transformer = DataTransformer(historical_data, weather_data, test_ratio=TEST_SPLIT,
+                                   valiation_ratio=VALIDATION_SPLIT, train_ratio=TRAIN_SPLIT)
 
-merged_df = data_transformer.get_merged_df()
+
+merged_df, index = data_transformer.get_merged_df()
 
 
-def find_best_features():
+def find_best_features(alpha: float = 0.01, max_iter: int = 2000) -> None:
     X = merged_df[INPUT_FEATURES]
     y = merged_df['value']
 
+    # Split the data into training and testing sets
+    X_train, X_test, X_val, y_val, y_train, y_test = data_transformer.get_train_and_test_data(
+        X, y)
+
     X_scaler = RobustScaler()
-    X_scaled = X_scaler.fit_transform(X)
+    X_train = X_scaler.fit_transform(X_train)
 
     y_scaler = RobustScaler()
-    y_scaled = y_scaler.fit_transform(y.values.reshape(-1, 1))
+    y_train = y_scaler.fit_transform(y_train.values.reshape(-1, 1))
 
-    # Split the data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_scaled, y_scaled, test_size=SPLIT_RATIO, random_state=42)
-
-    lasso_model = Lasso(alpha=0.01, max_iter=2000)
+    lasso_model = Lasso(alpha=alpha, max_iter=max_iter)
 
     lasso_model.fit(X_train, y_train)
 
@@ -71,20 +77,20 @@ def find_best_features():
     })
 
     feature_importance_df = feature_importance_df.reindex(
-        feature_importance_df['Importance'].abs().sort_values(ascending=False).index)
+        feature_importance_df['Importance'].sort_values(ascending=True).index)
 
     plt.figure(figsize=(10, 6))
     plt.barh(feature_importance_df['Feature'],
              feature_importance_df['Importance'], color='green')
     plt.xlabel('Svarīgums')
     plt.title('Lasso modeļa parametru svarīgums')
-    plt.yticks(rotation=45)
+    # plt.yticks(rotation=45)
     plt.tight_layout()
     plt.savefig('feature_selection/lasso_feature_importance.png')
     plt.show()
 
 
-def find_best_hyperparameters():
+def find_best_hyperparameters() -> tuple[float, int]:
     X = merged_df[SELECTED_FEATURES]
     y = merged_df['value']
 
@@ -109,11 +115,13 @@ def find_best_hyperparameters():
     random_search.fit(X_test, y_test)
     best_val_score = random_search.best_score_
 
-    print("Best Parameters:", best_params)
-    print("Test R2:", best_score)
-    print("Valuation R2:", best_val_score)
+    best_alpha = best_params.get("alpha")
+    best_max_iters = best_params.get("max_iter")
+    return best_alpha, best_max_iters
 
 
 if __name__ == "__main__":
-    # find_best_features()
-    find_best_hyperparameters()
+    best_alpha, best_max_iters = find_best_hyperparameters()
+    print("Best alpha:", best_alpha)
+    print("Best max_iter:", best_max_iters)
+    best_alpha, best_max_iters = find_best_features(best_alpha, best_max_iters)

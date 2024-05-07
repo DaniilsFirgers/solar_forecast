@@ -6,10 +6,14 @@ from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
 from data_handling.transform import DataTransformer, PARAMETERS_NAME_MAP
+from sklearn.preprocessing import RobustScaler
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
-OBJECT = "C"
+OBJECT = "B"
+TRAIN_SPLIT = 0.70
+VALIDATION_SPLIT = 0.15
+TEST_SPLIT = 0.15
 INPUT_FEATURES = ["shortwave_radiation",  'relative_humidity', 'pressure', 'rain',
                   'wind_speed', "temperature", 'direct_normal_irradiance', 'direct_radiation', 'terrestrial_radiation']
 filter_query = {
@@ -24,9 +28,10 @@ if historical_data is None or weather_data is None:
     print("Error retrieving data from MongoDB.")
     exit(1)
 
-data_transformer = DataTransformer(historical_data, weather_data)
+data_transformer = DataTransformer(historical_data, weather_data, test_ratio=TEST_SPLIT,
+                                   valiation_ratio=VALIDATION_SPLIT, train_ratio=TRAIN_SPLIT)
 
-merged_df = data_transformer.get_merged_df()
+merged_df, index = data_transformer.get_merged_df()
 
 
 def find_best_features():
@@ -35,9 +40,19 @@ def find_best_features():
 
     lr = LinearRegression()
 
+    # Split the data into training and testing sets
+    X_train, X_test, X_val, y_val, y_train, y_test = data_transformer.get_train_and_test_data(
+        X, y)
+
+    X_scaler = RobustScaler()
+    X_train = X_scaler.fit_transform(X_train)
+
+    y_scaler = RobustScaler()
+    y_train = y_scaler.fit_transform(y_train.values.reshape(-1, 1))
+
     selector = RFE(estimator=lr, n_features_to_select=5)
 
-    selector.fit(X, y)
+    selector.fit(X_train, y_train)
     selected_features_indices = selector.support_
     selected_features = X.columns[selected_features_indices]
 

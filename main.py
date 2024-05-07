@@ -19,12 +19,11 @@ from models.main import GRU, LSTM, RNN
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
-TRAIN_SPLIT = 0.80
-VALIDATION_SPLIT = 0.10
-TEST_SPLIT = 0.10
-OBJECTS = ['A', 'B', 'C']
-NUM_EPOCHS = 700
-
+TRAIN_SPLIT = 0.70
+VALIDATION_SPLIT = 0.15
+TEST_SPLIT = 0.15
+OBJECTS = ['B', 'C']
+NUM_EPOCHS = 12000
 # TODO:
 # 1. Why i do not use MPE and MAPE -> too small values can lead to division by zero or to high values [X]
 # 2. Individual chaoice for hidden layers and layers for each object [X]
@@ -40,17 +39,17 @@ NUM_EPOCHS = 700
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    {"name": "GRU", "model": None, "input_features": ['direct_radiation',
-                                                      'pressure', 'relative_humidity', 'temperature', 'rain', 'hour'], "short_name": "gru", "hidden_layers": {"A": 32, "B": 128, "C": 64}, "layers": {"A": 4, "B": 3, "C": 4}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
-    {"name": "Lasso", "model": Lasso(alpha=0.1, max_iter=100, positive=True), "input_features": [
-        'shortwave_radiation',
-        'relative_humidity', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
-    {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-                                                       'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
-    {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-                                                      'temperature', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 128, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0.1, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
+    # {"name": "GRU", "model": None, "input_features": ['direct_radiation', 'shortwave_radiation', 'wind_speed',
+    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'hour'], "short_name": "gru", "hidden_layers": {"A": 128, "B": 128, "C": 128}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
+    {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=50, positive=True), "input_features": [
+        'shortwave_radiation', 'direct_radiation',
+        'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
+    #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
+    # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
+    #                                                   'temperature', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 128, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0.1, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
 ]
 
 for model in MODELS:
@@ -95,11 +94,8 @@ for model in MODELS:
 
         if model["short_name"] == "lasso" or model["short_name"] == "linear_regression":
 
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=1-TRAIN_SPLIT, shuffle=False, random_state=42)
-
-            X_val, X_test, y_val, y_test = train_test_split(
-                X_test, y_test, test_size=TEST_SPLIT/(TEST_SPLIT + VALIDATION_SPLIT), shuffle=False,  random_state=42)
+            X_train, X_test, X_val, y_val, y_train, y_test = data_transformer.get_train_and_test_data(
+                X, y)
 
             X_test_scaled = X_scaler.fit_transform(X_test)
             X_train_scaled = X_scaler.transform(X_train)
@@ -107,7 +103,6 @@ for model in MODELS:
 
             y_train_scaled = y_scaler.fit_transform(
                 y_train.values.reshape(-1, 1))
-
             y_val_scaled = y_scaler.transform(y_val.values.reshape(-1, 1))
             y_test_scaled = y_scaler.transform(y_test.values.reshape(-1, 1))
 
@@ -195,7 +190,7 @@ for model in MODELS:
             model_type = ModelType.LSTM if model["short_name"] == "lstm" else ModelType.RNN
 
             early_stopping = EarlyStopping(
-                object_name=object, patience=150, min_delta=0.001, model_type=model_type)
+                object_name=object, patience=350, min_delta=0.001, model_type=model_type)
 
             for epoch in range(NUM_EPOCHS):
                 outputs = nn_model(X_train_tensor.unsqueeze(1)).squeeze()
@@ -226,15 +221,15 @@ for model in MODELS:
 
                 if (epoch + 1) % 10 == 0:
                     print(
-                        f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {train_loss.item():.4f}, Test Loss: {eval_loss.item():.4f}, Test R2: {r2:.4f}, Adjusted R2: {adjusted_r2:.4f}")
+                        f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {train_loss.item():.4f}, Test Loss: {eval_loss.item():.4f}, Validation R2: {r2:.4f}, Adjusted R2: {adjusted_r2:.4f}")
 
                 eval_losses.append(eval_loss.detach().numpy())
                 train_losses.append(train_loss.detach().numpy())
 
                 early_stopping.update(eval_loss.item(), nn_model)
-                # if early_stopping.should_stop():
-                #     print(f'Early stopping at epoch {epoch}')
-                #     break
+                if early_stopping.should_stop():
+                    print(f'Early stopping at epoch {epoch}')
+                    break
 
             early_stopping.save_best_model_weights()
             loss_plot = PlotLoss(model["name"], object_name=object, title=loss_plot_title, save_path=loss_save_path,
@@ -305,7 +300,6 @@ bar_width = 0.3
 for metric in metrics:
     metric_data_A = pivot_df[f'{metric}_A']
     metric_data_B = pivot_df[f'{metric}_B']
-    metric_data_C = pivot_df[f'{metric}_C']
 
     # Calculate positions for each set of bars
     x = np.arange(len(models))  # positions for the model groups
@@ -317,9 +311,6 @@ for metric in metrics:
                      label='Saules parks “A”')
     bars_b = plt.bar(x + bar_width, metric_data_B,
                      width=bar_width, label='Saules parks “B”')
-    bars_c = plt.bar(x + 2 * bar_width, metric_data_C,
-                     width=bar_width, label='Saules parks “C”')
-
     # Set labels, titles, and legends
     plt.xlabel('Model')
     plt.ylabel(metric)
@@ -328,7 +319,7 @@ for metric in metrics:
     plt.xticks(x + group_width / 2 - bar_width / 2, models)
     plt.legend()
 
-    for bars in [bars_a, bars_b, bars_c]:
+    for bars in [bars_a, bars_b]:
         for bar in bars:
             yval = bar.get_height()
             plt.text(bar.get_x() + bar.get_width()/2, yval,
