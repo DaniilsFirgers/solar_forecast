@@ -244,6 +244,7 @@ class ModelWrapper(TypedDict):
     layers: ObjectConfig | None
     dropout: float | None
     negative_slope: ObjectConfig | None
+    patience: ObjectConfig | None
 
 
 PARAMETERS_NAME_MAP = {"value": "Ražošanas vērtības", "temperature": "Temperatūra", "relative_humidity": "Relatīvais mitrums", "wind_speed": "Vēja ātrums", "pressure": "Atmosfēras spiediens",
