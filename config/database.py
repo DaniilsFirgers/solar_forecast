@@ -7,8 +7,8 @@ MONGO_PASSWORD = None
 
 
 FORECAST_DB_NAME = 'forecast'
-# PRODUCTION_COLLECTION_NAME = 'production_history'
-PRODUCTION_COLLECTION_NAME = 'production_data_tmp'
+PRODUCTION_COLLECTION_NAME = 'production_history'
+# PRODUCTION_COLLECTION_NAME = 'production_data_tmp'
 WEATHER_COLLECTION_NAME = 'weather_data'
 
 

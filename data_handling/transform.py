@@ -132,8 +132,8 @@ class PlotLoss():
                  label=self.x_label, color=self.x_color)
         plt.plot(range(1, len(self.y_data) + 1), self.y_data,
                  label=self.y_label, color=self.y_color)
-        plt.title(
-            self.title)
+        # plt.title(
+        #     self.title)
         plt.legend()
         plt.grid(True)
         plt.savefig(self.save_path)

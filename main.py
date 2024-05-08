@@ -39,17 +39,17 @@ NUM_EPOCHS = 12000
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    # {"name": "GRU", "model": None, "input_features": ['direct_radiation', 'shortwave_radiation', 'wind_speed',
-    #                                                   'pressure', 'relative_humidity', 'temperature', 'rain', 'hour'], "short_name": "gru", "hidden_layers": {"A": 128, "B": 128, "C": 128}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
-    {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=50, positive=True), "input_features": [
-        'shortwave_radiation', 'direct_radiation',
-        'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+    #                                                   'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 128, "B": 128, "C": 128}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
+    # {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=50, positive=True), "input_features": [
+    #     'shortwave_radiation', 'direct_radiation',
+    #     'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
     # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
     #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "LSTM", "model": None, "input_features": ['direct_radiation', 'pressure', 'relative_humidity',
-    #                                                    'temperature', 'terrestrial_radiation', 'wind_speed', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
-    # {"name": "RNN", "model": None, "input_features": ['pressure', 'rain', 'relative_humidity', 'shortwave_radiation',
-    #                                                   'temperature', 'wind_speed', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 128, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0.1, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
+    # {"name": "LSTM", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+    #                                                    'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-5}},
+    {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 128, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 3}, "dropout": 0.1, "negative_slope": {"A": 1e-3, "B": 1e-6, "C": 1e-7}},
 ]
 
 for model in MODELS:
@@ -184,13 +184,13 @@ for model in MODELS:
                 nn_model = GRU(input_dim=X_train_tensor.shape[1], hidden_dim=hidden_layers,
                                num_layers=layers, output_dim=1, droupout=dropout, negative_slope=negative_slope)
 
-            criterion = nn.MSELoss()
+            criterion = nn.SmoothL1Loss()
             optimizer = torch.optim.Adam(
-                nn_model.parameters(), lr=0.0005)
+                nn_model.parameters(), lr=0.001)
             model_type = ModelType.LSTM if model["short_name"] == "lstm" else ModelType.RNN
 
             early_stopping = EarlyStopping(
-                object_name=object, patience=350, min_delta=0.001, model_type=model_type)
+                object_name=object, patience=200, min_delta=0.001, model_type=model_type)
 
             for epoch in range(NUM_EPOCHS):
                 outputs = nn_model(X_train_tensor.unsqueeze(1)).squeeze()
