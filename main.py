@@ -20,9 +20,9 @@ from models.main import GRU, LSTM, RNN
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 TRAIN_SPLIT = 0.70
-VALIDATION_SPLIT = 0.15
-TEST_SPLIT = 0.15
-OBJECTS = ['B', 'C']
+VALIDATION_SPLIT = 0.25
+TEST_SPLIT = 0.05
+OBJECTS = ['A', 'B']
 NUM_EPOCHS = 12000
 # TODO:
 # 1. Why i do not use MPE and MAPE -> too small values can lead to division by zero or to high values [X]
@@ -40,16 +40,16 @@ evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
     {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 128, "B": 64, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-5}, "patience": {"A": 100, "B": 120, "C": 175}},
-    # {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=50, positive=True), "input_features": [
-    #     'shortwave_radiation', 'direct_radiation',
-    #     'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "LSTM", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-    #                                                    'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 64, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}},
-    # {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-    #                                                   'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 64, "C": 128}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 100, "B": 120, "C": 175}},
+                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-5}, "patience": {"A": 120, "B": 150, "C": 175}},
+    {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=50, positive=True), "input_features": [
+        'shortwave_radiation', 'direct_radiation',
+        'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
+    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    {"name": "LSTM", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                       'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}},
+    {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}},
 ]
 
 for model in MODELS:
@@ -188,7 +188,13 @@ for model in MODELS:
             criterion = nn.SmoothL1Loss()
             optimizer = torch.optim.Adam(
                 nn_model.parameters(), lr=0.001)
-            model_type = ModelType.LSTM if model["short_name"] == "lstm" else ModelType.RNN
+            model_type: str
+            if model["short_name"] == "lstm":
+                model_type = ModelType.LSTM
+            elif model["short_name"] == "rnn":
+                model_type = ModelType.RNN
+            elif model["short_name"] == "gru":
+                model_type = ModelType.GRU
 
             early_stopping = EarlyStopping(
                 object_name=object, patience=patience, min_delta=0.001, model_type=model_type)
@@ -315,7 +321,7 @@ for metric in metrics:
     # Set labels, titles, and legends
     plt.xlabel('Model')
     plt.ylabel(metric)
-    plt.title(f'{metric} pēc modeļa un saules parka')
+    # plt.title(f'{metric} pēc modeļa un saules parka')
     # Centering ticks under the middle bar of each group
     plt.xticks(x + group_width / 2 - bar_width / 2, models)
     plt.legend()

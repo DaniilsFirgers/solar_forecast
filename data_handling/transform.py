@@ -75,6 +75,7 @@ class ModelType(Enum):
     LSTM = 'LSTM'
     RNN = 'RNN'
     NBEATS = 'NBEATS'
+    GRU = 'GRU'
 
 
 class EarlyStopping:
