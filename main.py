@@ -39,17 +39,17 @@ NUM_EPOCHS = 12000
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-5}, "patience": {"A": 120, "B": 150, "C": 175}},
+    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+    #                                                   'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-5}, "patience": {"A": 120, "B": 150, "C": 175}},
     {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=50, positive=True), "input_features": [
         'shortwave_radiation', 'direct_radiation',
         'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
-    {"name": "LSTM", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-                                                       'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}},
-    {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}},
+    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
+    # {"name": "LSTM", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+    #                                                    'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}},
+    # {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+    #                                                   'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}},
 ]
 
 for model in MODELS:
@@ -96,7 +96,9 @@ for model in MODELS:
 
             X_train, X_test, X_val, y_val, y_train, y_test = data_transformer.get_train_and_test_data(
                 X, y)
-
+            print(start_time_index.iloc[X_train.index])
+            print(start_time_index.iloc[X_test.index])
+            print(start_time_index.iloc[X_val.index])
             X_test_scaled = X_scaler.fit_transform(X_test)
             X_train_scaled = X_scaler.transform(X_train)
             X_val_scaled = X_scaler.transform(X_val)
