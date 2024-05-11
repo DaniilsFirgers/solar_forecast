@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import r2_score
 import torch.nn as nn
 from sklearn.linear_model import Lasso
@@ -10,12 +11,12 @@ from config.database import FORECAST_DB_NAME, PRODUCTION_COLLECTION_NAME, WEATHE
 from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
-from sklearn.model_selection import train_test_split
 from data_handling.transform import EarlyStopping, ModelType, PlotLoss, PlotPredictions, DataTransformer, ModelWrapper, mean_bias_error, adjusted_r_squared
 from sklearn.linear_model import LinearRegression
 from typing import List
 from statsmodels.stats.stattools import durbin_watson
 from models.main import GRU, LSTM, RNN
+import joblib
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
@@ -24,7 +25,8 @@ VALIDATION_SPLIT = 0.25
 TEST_SPLIT = 0.05
 OBJECTS = ['A', 'B']
 NUM_EPOCHS = 5000
-NEED_TRAINING = False
+NN_NEED_TRAINING = False
+LR_NEED_TRAINING = False
 
 
 evaluation_data = []
@@ -41,6 +43,8 @@ MODELS: List[ModelWrapper] = [
                                                        'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}, "plot_color": "magenta"},
     {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
                                                       'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}, "plot_color": "yellow"},
+    {"name": "Gradient Boosting", "model": GradientBoostingRegressor(n_estimators=750, learning_rate=0.01, alpha=0.9, n_iter_no_change=25), "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                                                                                                                               'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gb", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "cyan"}
 ]
 
 for object in OBJECTS:
@@ -85,7 +89,7 @@ for object in OBJECTS:
         X_scaler = RobustScaler()
         y_scaler = RobustScaler()
 
-        if model["short_name"] == "lasso" or model["short_name"] == "linear_regression":
+        if model["short_name"] == "lasso" or model["short_name"] == "linear_regression" or model["short_name"] == "gb":
 
             X_train, X_test, X_val, y_val, y_train, y_test = data_transformer.get_train_and_test_data(
                 X, y)
@@ -101,7 +105,16 @@ for object in OBJECTS:
 
             lr_model = model["model"]
 
-            lr_model.fit(X_train_scaled, y_train_scaled)
+            if model["short_name"] == "gb":
+                y_train_scaled = y_train_scaled.flatten()
+
+            if LR_NEED_TRAINING:
+                lr_model.fit(X_train_scaled, y_train_scaled)
+                joblib.dump(
+                    lr_model, f'trained_models/{model["short_name"]}_{object}.pkl')
+            else:
+                lr_model = joblib.load(
+                    f'trained_models/{model["short_name"]}_{object}.pkl')
 
             lr_evals = lr_model.predict(X_val_scaled)
 
@@ -181,7 +194,7 @@ for object in OBJECTS:
                 object_name=object, patience=patience, min_delta=0.001, model_type=model_type)
 
             best_weght_path = f'trained_models/best_{model["name"]}_weights_{object}.pt'
-            if NEED_TRAINING:
+            if NN_NEED_TRAINING:
                 for epoch in range(NUM_EPOCHS):
                     outputs = nn_model(X_train_tensor.unsqueeze(1)).squeeze()
                     optimizer.zero_grad()
@@ -259,6 +272,9 @@ for object in OBJECTS:
         rmse = mean_squared_error(ground_truth, predictions, squared=False)
         mae = mean_absolute_error(ground_truth, predictions)
         mbe = mean_bias_error(ground_truth, predictions)
+        print(
+            f'R^2: {test_score}, RMSE: {rmse}, MAE: {mae}, MBE: {mbe}'
+        )
         evaluation_data.append({
             'Model': model["name"],
             'Solar Park': object,
