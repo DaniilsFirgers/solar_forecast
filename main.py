@@ -23,38 +23,31 @@ TRAIN_SPLIT = 0.70
 VALIDATION_SPLIT = 0.25
 TEST_SPLIT = 0.05
 OBJECTS = ['A', 'B']
-NUM_EPOCHS = 12000
-# TODO:
-# 1. Why i do not use MPE and MAPE -> too small values can lead to division by zero or to high values [X]
-# 2. Individual chaoice for hidden layers and layers for each object [X]
-# 3. Add 'month', 'day_of_week', 'hour' to analysis parameters ! [X]
-# 4. Write about softplus activation function and why RELu is not used (dyinig relu problem and vanishing gradients) [X]
-# 5. Write about GRU parameters choice
-# 7. Adjusted R^2 description
-# 8. Add a bit of stuff about RNN
-# 9. Get correct datetimes for test data !
-# 10 Table of abbreviations
+NUM_EPOCHS = 5000
+NEED_TRAINING = False
 
 
 evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
-    # {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-    #                                                   'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-5}, "patience": {"A": 120, "B": 150, "C": 175}},
-    {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=50, positive=True), "input_features": [
+    {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-5}, "patience": {"A": 120, "B": 150, "C": 175}, "plot_color": "green"},
+    {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=200, positive=True), "input_features": [
         'shortwave_radiation', 'direct_radiation',
-        'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
-    #     'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None},
-    # {"name": "LSTM", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-    #                                                    'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}},
-    # {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-    #                                                   'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}},
+        'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "blue"},
+    {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
+        'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "red"},
+    {"name": "LSTM", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                       'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}, "plot_color": "magenta"},
+    {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}, "plot_color": "yellow"},
 ]
 
-for model in MODELS:
-    for object in OBJECTS:
-
+for object in OBJECTS:
+    list_of_predictions = []
+    list_of_labels = []
+    for model in MODELS:
+        list_of_labels.append(model["name"])
         print(
             f'---------------------Object: {object}; Model: {model["name"]}---------------------')
 
@@ -96,9 +89,7 @@ for model in MODELS:
 
             X_train, X_test, X_val, y_val, y_train, y_test = data_transformer.get_train_and_test_data(
                 X, y)
-            print(start_time_index.iloc[X_train.index])
-            print(start_time_index.iloc[X_test.index])
-            print(start_time_index.iloc[X_val.index])
+
             X_test_scaled = X_scaler.fit_transform(X_test)
             X_train_scaled = X_scaler.transform(X_train)
             X_val_scaled = X_scaler.transform(X_val)
@@ -135,18 +126,6 @@ for model in MODELS:
 
             durbin_watson_test_score = durbin_watson(residuals)
             print(f'Test Durbin-Watson score: {durbin_watson_test_score}')
-
-            predictions_df = pd.DataFrame(
-                {'predictions': predictions.flatten()}, index=X_test.index)
-
-            predictions_df = predictions_df.join(
-                y_test)
-
-            predictions_df = predictions_df.join(
-                start_time_index
-            )
-            predictions_df.sort_values(by='start_time', inplace=True)
-            predictions_df.set_index('start_time', inplace=True)
 
             ground_truth = y_test
 
@@ -201,54 +180,56 @@ for model in MODELS:
             early_stopping = EarlyStopping(
                 object_name=object, patience=patience, min_delta=0.001, model_type=model_type)
 
-            for epoch in range(NUM_EPOCHS):
-                outputs = nn_model(X_train_tensor.unsqueeze(1)).squeeze()
-                optimizer.zero_grad()
-                train_loss: torch.Tensor = criterion(outputs, y_train_tensor)
-                train_loss.backward()
+            best_weght_path = f'trained_models/best_{model["name"]}_weights_{object}.pt'
+            if NEED_TRAINING:
+                for epoch in range(NUM_EPOCHS):
+                    outputs = nn_model(X_train_tensor.unsqueeze(1)).squeeze()
+                    optimizer.zero_grad()
+                    train_loss: torch.Tensor = criterion(
+                        outputs, y_train_tensor)
+                    train_loss.backward()
 
-                # TODO: experimnet with different clipping values fro LSTM and GRU
-                if model["short_name"] == "rnn":
-                    torch.nn.utils.clip_grad_norm_(nn_model.parameters(), 10.0)
-                optimizer.step()
+                    if model["short_name"] == "rnn":
+                        torch.nn.utils.clip_grad_norm_(
+                            nn_model.parameters(), 10.0)
+                    optimizer.step()
 
-                nn_model.eval()
-                with torch.no_grad():
-                    eval_outputs = nn_model(
-                        X_val_tensor.unsqueeze(1)).squeeze()
-                    eval_loss: torch.Tensor = criterion(
-                        eval_outputs, y_val_tensor)
+                    nn_model.eval()
+                    with torch.no_grad():
+                        eval_outputs = nn_model(
+                            X_val_tensor.unsqueeze(1)).squeeze()
+                        eval_loss: torch.Tensor = criterion(
+                            eval_outputs, y_val_tensor)
 
-                eval_outputs = y_scaler.inverse_transform(
-                    eval_outputs.reshape(-1, 1)).flatten()
-                y_val_original = y_scaler.inverse_transform(
-                    y_val_tensor.numpy().reshape(-1, 1)).flatten()
+                    eval_outputs = y_scaler.inverse_transform(
+                        eval_outputs.reshape(-1, 1)).flatten()
+                    y_val_original = y_scaler.inverse_transform(
+                        y_val_tensor.numpy().reshape(-1, 1)).flatten()
 
-                r2 = r2_score(y_val_original, eval_outputs)
-                adjusted_r2 = adjusted_r_squared(
-                    r2, X_val.shape[0], X_val.shape[1])
+                    r2 = r2_score(y_val_original, eval_outputs)
+                    adjusted_r2 = adjusted_r_squared(
+                        r2, X_val.shape[0], X_val.shape[1])
 
-                if (epoch + 1) % 10 == 0:
-                    print(
-                        f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {train_loss.item():.4f}, Test Loss: {eval_loss.item():.4f}, Validation R2: {r2:.4f}, Adjusted R2: {adjusted_r2:.4f}")
+                    if (epoch + 1) % 10 == 0:
+                        print(
+                            f"Epoch [{epoch+1}/{NUM_EPOCHS}], Train Loss: {train_loss.item():.4f}, Test Loss: {eval_loss.item():.4f}, Validation R2: {r2:.4f}, Adjusted R2: {adjusted_r2:.4f}")
 
-                eval_losses.append(eval_loss.detach().numpy())
-                train_losses.append(train_loss.detach().numpy())
+                    eval_losses.append(eval_loss.detach().numpy())
+                    train_losses.append(train_loss.detach().numpy())
 
-                early_stopping.update(eval_loss.item(), nn_model)
-                if early_stopping.should_stop():
-                    print(f'Early stopping at epoch {epoch}')
-                    break
+                    early_stopping.update(eval_loss.item(), nn_model)
+                    if early_stopping.should_stop():
+                        print(f'Early stopping at epoch {epoch}')
+                        break
 
-            early_stopping.save_best_model_weights()
-            loss_plot = PlotLoss(model["name"], object_name=object, title=loss_plot_title, save_path=loss_save_path,
-                                 x_data=train_losses, y_data=eval_losses)
-            # TODO: save plot here
-            loss_plot.create_plot()
+                early_stopping.save_best_model_weights()
+                loss_plot = PlotLoss(model["name"], object_name=object, title=loss_plot_title, save_path=loss_save_path,
+                                     x_data=train_losses, y_data=eval_losses)
+                # TODO: save plot here
+                loss_plot.create_plot()
+                best_weght_path = early_stopping.best_weights_path
 
-            nn_model.load_state_dict(torch.load(
-                early_stopping.best_weights_path))
-
+            nn_model.load_state_dict(torch.load(best_weght_path))
             nn_model.eval()
             with torch.no_grad():
                 test_outputs = nn_model(X_test_tensor.unsqueeze(1)).squeeze()
@@ -264,8 +245,16 @@ for model in MODELS:
                 predictions = test_outputs
                 ground_truth = y_val_original
 
-        # results_plot = PlotPredictions(model["name"], object_name=object, title=results_plot_title, save_path=results_save_path,
-        #                                data=predictions_df)
+        predictions_df = pd.DataFrame(
+            {'predictions': predictions.flatten()}, index=X_test.index)
+
+        predictions_df = predictions_df.join(
+            start_time_index
+        )
+        predictions_df.sort_values(by='start_time', inplace=True)
+        predictions_df.set_index('start_time', inplace=True)
+
+        list_of_predictions.append(predictions_df)
 
         rmse = mean_squared_error(ground_truth, predictions, squared=False)
         mae = mean_absolute_error(ground_truth, predictions)
@@ -279,17 +268,18 @@ for model in MODELS:
             'MBE': mbe
         })
 
-        print("Test R^2:", test_score)
-        print("Mean Squared Error:", rmse)
-        print("Mean Absolute Error:", mae)
-        print("Mean Bias Error:", mbe)
-        # results_plot.create_plot()
+    truth_values = y_test.join(
+        start_time_index
+    )
 
+    truth_values.sort_values(by='start_time', inplace=True)
+    truth_values.set_index('start_time', inplace=True)
+    results_plot = PlotPredictions(model["name"], object_name=object, save_path=results_save_path,
+                                   predictions=list_of_predictions, truth_values=truth_values, labels=list_of_labels)
+    results_plot.create_plot()
 
 evaluation_df = pd.DataFrame(evaluation_data)
 
-# Now, you have all your evaluation metrics stored in the DataFrame
-print(evaluation_df)
 
 pivot_df = evaluation_df.pivot(index='Model', columns='Solar Park')
 
@@ -299,7 +289,6 @@ pivot_df.columns = [f'{col[0]}_{col[1]}' for col in pivot_df.columns]
 # Reset index
 pivot_df.reset_index(inplace=True)
 
-print(pivot_df)
 
 models = pivot_df['Model']
 metrics = ['R^2', 'MAE', 'RMSE', 'MBE']
