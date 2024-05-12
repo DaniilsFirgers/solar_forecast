@@ -15,7 +15,7 @@ Project structure is available at the end of the file.
 Meteo data scraper is written is Rust programming language and data is saved to MongoDb. The scraper is designed to gather data for the last year for three specific locations (by latitude and longitude). The scraper can be launched as many times as the user wants, but the data will be scraped based on the newest date from the database for a specific object.
 
 - Scraper can be launched in docker by running `docker compose up` in /data_scraping (can take up a considerabel amount of disk space);
-- Or `MONGO_URL` environment variable can be added, for example, running on default port with `mongodb://localhost:27017`. Then cd /data_scraping and launch script with `cargo run`. You need rust and mongodb isntalled on your local machine;
+- Or `MONGO_URL` environment variable can be added to run on the default port with `mongodb://localhost:27017`. Then cd /data_scraping and launch script with `cargo run`. You need rust and mongodb isntalled on your local machine;
 
 ** Model training **
 
