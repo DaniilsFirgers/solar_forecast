@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  meteo_data_scraper:
+    build: .
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+    networks:
+      - rust_mongo_network
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "8001:27017"
+    networks:
+      - rust_mongo_network
+
+networks:
+  rust_mongo_network:
+    driver: bridge
