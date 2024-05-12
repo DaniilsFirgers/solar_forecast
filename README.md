@@ -12,6 +12,7 @@ Project structure is available at the end of the file.
 
 ---
 
+```
 .
 ├── config
 │   ├── database.py
@@ -80,3 +81,4 @@ Project structure is available at the end of the file.
    ├── lasso_B.pkl
    ├── linear_regression_A.pkl
    └── linear_regression_B.pkl
+```
