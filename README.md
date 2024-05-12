@@ -10,6 +10,13 @@ This repository contains code for gathering data and various models training as 
 
 Project structure is available at the end of the file.
 
+** Data scraping **
+
+MongoDb on port 27017 is required as well as Rust installed on the system.
+
+Meteo data scraper is written is Rust programming language and data is saved to MongoDb. The scraper is designed to gather data for the last year for three specific locations (by latitude and longitude). The scraper can be launched as many times as the user wants, but the data will be scraped based on the newest date from the database for a specific object. 
+
+** Model training **
 ---
 
 ```
@@ -18,19 +25,12 @@ Project structure is available at the end of the file.
 │   ├── database.py
 │   ├── **init**.py
 │   └── **pycache**
-│   ├── database.cpython-310.pyc
-│   └── **init**.cpython-310.pyc
 ├── database
 │   ├── **init**.py
 │   ├── main.py
 │   └── **pycache**
-│   ├── **init**.cpython-310.pyc
-│   └── main.cpython-310.pyc
 ├── data_handling
 │   ├── **init**.py
-│   ├── **pycache**
-│   │   ├── **init**.cpython-310.pyc
-│   │   └── transform.cpython-310.pyc
 │   └── transform.py
 ├── data_scraping
 │   ├── Cargo.lock
@@ -62,8 +62,8 @@ Project structure is available at the end of the file.
 │   ├── **init**.py
 │   ├── main.py
 │   └── **pycache**
-│   ├── **init**.cpython-310.pyc
-│   └── main.cpython-310.pyc
+│   
+│   
 ├── plots
 ├── project_tree.txt
 ├── README.md
