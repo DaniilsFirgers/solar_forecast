@@ -4,6 +4,28 @@
 
 Projekta struktūra ir pieejama faila beigās.
 
+**Datu iegūšana**
+
+Meteo datu savācējs ir rakstīts Rust programmēšanas valodā, un dati tiek saglabāti MongoDb. Skreperis ir paredzēts, lai apkopotu datus par pēdējo gadu trīs konkrētās vietās (pēc platuma un garuma). Skreperi var palaist tik reižu, cik lietotājs vēlas, bet dati tiks saskrāpēti, pamatojoties uz jaunāko datumu no datubāzes konkrētam objektam.
+
+- Datu vācēju var palaist docker vidē, palaižot ar `docker compose up` /data_scraping (var aizņemt ievērojamu diska vietas daudzumu);
+- Vai arī var pievienot `MONGO_URL` vides mainīgo, lai palaistu noklusējuma portā ar `mongodb://localhost:27017`. Pēc tam direktoriju nomainiet uz /data_scraping un palaižiet skriptu ar `cargo run`. Vietējā datorā ir jābūt instalētam rust un mongodb;
+
+**Modeļu apmācība**
+
+`main.py` skripts satur mašīnmācīšanās modeļu apmācības, validācijas un testēšanas kodu;
+
+- Ja nepieciešams pārmācīt regresiju, iestatiet `LR_NEED_TRAINING` uz true, ja nepieciešams pārmācīt neironu tīklus, iestatiet `NN_NEED_TRAINING` uz true. Šis skripts arī saglabā zaudējumu un rezultātu diagrammas mapē /plots. Labākie modeļu svari tiek saglabāti mapē /trained_models;
+- mapē /feature_selection ir skripti, lai noskaidrotu katra modeļa labākos parametrus (kā arī iepriekšējo darbību labākos parametrus, kas saglabāti kā grafiki);
+- mapē /database ir klase un saistītās funkcijas datu bāzes savienojumiem un ierakstu ievietošanai;
+- mapē /data_handling mapē transform.py failā ir klases modeļu agrīnai apstāšanai, vairāku grafiku izveidei un datu pārveidošanai, kā arī dažas palīgfunkcijas;
+- mapē /config database.py failā ir ar datubāzi saistītie savienojuma mainīgie un URL;
+- Ja lietotājs nolemj palaist datu skrāpi lokāli bez docker, tad `MONGO_URL` jāiestata uz `mongodb://localhost:27017`, citādi uz `mongodb://localhost:8001`.
+- `vizualize.ipynb` satur dažādus skriptus datu vizualizācijai, piemēram, vēsturisko laikapstākļu datu vai korelācijas matricas attēlošanai;
+
+Lietotājam ir divas iespējas - vai nu lejupielādēt nepieciešamās paketes no `requirements.txt` uz vietējo mašīnu, vai arī palaist virtuālajā vidē. Izveidojiet to ar `python3 -m venv myenv` un palaidiet to ar `source activate`.
+Deaktivējiet virtuālo vidi ar komandu `source deactivate`.
+
 # Solar power forecasting
 
 This repository contains code for gathering data and various models training as a part of masters thesis.
