@@ -19,18 +19,30 @@ Meteo data scraper is written is Rust programming language and data is saved to 
 
 **Model training**
 
+- `main.py` script has code for training, validation and testing of machine learning models;
+- If retraining for regressions is needed set `LR_NEED_TRAINING` to true, if retraining of neural networks is needed set `NN_NEED_TRAINING` to true. This script also saves loss and results plots to /plots folder. Best model weights are saved in the /trained_models folder;
+- /feature_selection folder has scripts for finding out best parameters for each model (as well as previous runs best parameters saved as plots);
+- /database folder has a class and associated functions for database connections and records insertion;
+- In /data_handling folder transform.py file includes classes for models early stopping, multiple plots creation and data transformation as well as a few utility functions;
+- In /config folder in database.py file there are database related connection variables and URL's;
+- If the used decides to launch data scraper locally without docker then `MONGO_URL` should be set to `mongodb://localhost:27017`, otherwise to `mongodb://localhost:8001`
+- `vizualize.ipynb` contains various scripts for data vizualizations such as historical weather data or correlation matrix;
+
+The user has two options, either to download required packages from `requirements.txt` to local machine, or run in a virtual environment. Create it with `python3 -m venv myenv` and run it with `source activate`.
+Deactivate virtual environment with the command `source deactivate`
+
 ```
 .
 ├── config
 │   ├── database.py
-│   ├── **init**.py
-│   └── **pycache**
+│   ├── init.py
+│   └── pycache
 ├── database
-│   ├── **init**.py
+│   ├── init.py
 │   ├── main.py
-│   └── **pycache**
+│   └── pycache
 ├── data_handling
-│   ├── **init**.py
+│   ├── init.py
 │   └── transform.py
 ├── data_scraping
 │   ├── Cargo.lock
@@ -48,7 +60,7 @@ Meteo data scraper is written is Rust programming language and data is saved to 
 │  
 ├── feature_selection
 │   ├── correlation_A.png
-│   ├── **init**.py
+│   ├── init.py
 │   ├── lasso_feature_importance.png
 │   ├── lasso.py
 │   ├── linear_regression.py
@@ -59,9 +71,9 @@ Meteo data scraper is written is Rust programming language and data is saved to 
 │   └── rnn.py
 ├── main.py
 ├── models
-│   ├── **init**.py
+│   ├── init.py
 │   ├── main.py
-│   └── **pycache**
+│   └── pycache
 │  
 │  
 ├── plots
