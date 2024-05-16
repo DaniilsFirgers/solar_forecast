@@ -9,7 +9,6 @@ __pycache__/
 
 # PyTorch
 *.pth
-*.pkl
 *.log
 
 !feature_selection/*.log

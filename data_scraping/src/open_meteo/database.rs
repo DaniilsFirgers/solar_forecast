@@ -5,7 +5,7 @@ use mongodb::{
     results::UpdateResult,
     Client, Collection, Database, IndexModel,
 };
-use std::{error::Error as StdError, sync::Arc};
+use std::{env, error::Error as StdError, sync::Arc};
 use tokio::sync::Mutex;
 
 use crate::{open_meteo::document::FormattedWeatherData, TOKIO_RT};
@@ -34,7 +34,8 @@ fn get_mongo_client() -> MongoDb {
 
 impl MongoDb {
     async fn new() -> Result<Self, Error> {
-        let client = Client::with_uri_str("mongodb://localhost:27017").await?;
+        let mongo_url = env::var("MONGO_URL").expect("MONGO_URL env not set");
+        let client = Client::with_uri_str(mongo_url).await?;
         let db = client.database("forecast");
         let collection = db.collection("weather_data");
 

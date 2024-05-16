@@ -142,26 +142,28 @@ class PlotLoss():
 
 
 class PlotPredictions():
-    def __init__(self, model_name: str, object_name: str, title: str, save_path: str, data: DataFrame | None, x_label='Patiesās vērtībās', y_label='Prognozetas vērtībās',  fig_size=(10, 5),  x_color='blue', y_color='green'):
+    def __init__(self, model_name: str, object_name: str, save_path: str, predictions: list[DataFrame | None], truth_values=DataFrame | None, labels=list[str],  x_label='Patiesās vērtībās', y_label='Prognozetas vērtībās',  fig_size=(10, 5),  x_color='black', y_color='green'):
         self.model_name = model_name
         self.object_name = object_name
         self.fig_size = fig_size
         self.x_label = x_label
         self.y_label = y_label
-        self.title = title
         self.save_path = save_path
         self.x_color = x_color
         self.y_color = y_color
-        self.data = data
+        self.predictions = predictions
+        self.truth_values = truth_values
+        self.labels = labels
 
     def create_plot(self):
         plt.figure(figsize=self.fig_size)
-        plt.plot(self.data.index, self.data["value"],
+        plt.plot(self.truth_values.index.values, self.truth_values["value"].values,
                  label=self.x_label, color=self.x_color)
-        plt.plot(self.data.index, self.data["predictions"],
-                 label=self.y_label, color=self.y_color)
-        plt.title(
-            self.title)
+        for i, data in enumerate(self.predictions):
+            plt.plot(data.index.values,
+                     data["predictions"].values, label=self.labels[i])
+        # plt.title(
+        #     self.title)
         plt.legend()
         plt.grid(True)
         plt.gca().xaxis.set_major_locator(AutoDateLocator())
@@ -246,6 +248,7 @@ class ModelWrapper(TypedDict):
     dropout: float | None
     negative_slope: ObjectConfig | None
     patience: ObjectConfig | None
+    plot_color: str
 
 
 PARAMETERS_NAME_MAP = {"value": "Ražošanas vērtības", "temperature": "Temperatūra", "relative_humidity": "Relatīvais mitrums", "wind_speed": "Vēja ātrums", "pressure": "Atmosfēras spiediens",
