@@ -11,7 +11,7 @@ from config.database import FORECAST_DB_NAME, PRODUCTION_COLLECTION_NAME, WEATHE
 from database.main import mongo_handler
 import matplotlib.pyplot as plt
 import matplotlib
-from data_handling.transform import EarlyStopping, ModelType, PlotLoss, PlotPredictions, DataTransformer, ModelWrapper, mean_bias_error, adjusted_r_squared
+from data_handling.transform import EarlyStopping, ModelType, PlotLoss, PlotPredictions, DataTransformer, ModelWrapper, mean_bias_error, adjusted_r_squared, calculate_nrmse
 from sklearn.linear_model import LinearRegression
 from typing import List
 from statsmodels.stats.stattools import durbin_watson
@@ -21,11 +21,11 @@ import joblib
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 TRAIN_SPLIT = 0.70
-VALIDATION_SPLIT = 0.25
-TEST_SPLIT = 0.05
+VALIDATION_SPLIT = 0.15
+TEST_SPLIT = 0.15
 OBJECTS = ['A', 'B']
 NUM_EPOCHS = 5000
-NN_NEED_TRAINING = False
+NN_NEED_TRAINING = True
 LR_NEED_TRAINING = False
 
 
@@ -33,18 +33,18 @@ evaluation_data = []
 
 MODELS: List[ModelWrapper] = [
     {"name": "GRU", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-5}, "patience": {"A": 120, "B": 150, "C": 175}, "plot_color": "green"},
+                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gru", "hidden_layers": {"A": 64, "B": 64, "C": 64}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.0, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-5}, "patience": {"A": 120, "B": 150, "C": 175}, "plot_color": "green"},
     {"name": "Lasso", "model": Lasso(alpha=0.001, max_iter=200, positive=True), "input_features": [
         'shortwave_radiation', 'direct_radiation',
         'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lasso", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "blue"},
     {"name": "Lineārā regresija", "model": LinearRegression(positive=True), "input_features": [
         'shortwave_radiation', 'relative_humidity', 'pressure', "rain", 'hour'], "short_name": "linear_regression", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "red"},
     {"name": "LSTM", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-                                                       'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}, "plot_color": "magenta"},
+                                                       'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}, "plot_color": "magenta"},
     {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
-                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.1, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}, "plot_color": "yellow"},
-    {"name": "Gradient Boosting", "model": GradientBoostingRegressor(n_estimators=750, learning_rate=0.01, alpha=0.9, n_iter_no_change=25), "input_features": ['shortwave_radiation', 'direct_radiation',
-                                                                                                                                                               'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gb", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "cyan"}
+                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.0, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}, "plot_color": "yellow"},
+    # {"name": "Gradient Boosting", "model": GradientBoostingRegressor(n_estimators=750, learning_rate=0.01, alpha=0.9, n_iter_no_change=25), "input_features": ['shortwave_radiation', 'direct_radiation',
+    #                                                                                                                                                            'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gb", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "cyan"}
 ]
 
 for object in OBJECTS:
@@ -270,10 +270,12 @@ for object in OBJECTS:
         list_of_predictions.append(predictions_df)
 
         rmse = mean_squared_error(ground_truth, predictions, squared=False)
+        rmse_range = calculate_nrmse(rmse, ground_truth)
+        rmse_mean = calculate_nrmse(rmse, ground_truth, method='mean')
         mae = mean_absolute_error(ground_truth, predictions)
         mbe = mean_bias_error(ground_truth, predictions)
         print(
-            f'R^2: {test_score}, RMSE: {rmse}, MAE: {mae}, MBE: {mbe}'
+            f'R^2: {test_score}, RMSE: {rmse}, MAE: {mae}, MBE: {mbe}', f'NRMSE range: {rmse_range}, NRMSE mean: {rmse_mean}'
         )
         evaluation_data.append({
             'Model': model["name"],
@@ -281,7 +283,9 @@ for object in OBJECTS:
             'R^2': test_score,
             'MAE': mae,
             'RMSE': rmse,
-            'MBE': mbe
+            'MBE': mbe,
+            'NRMSE range': rmse_range,
+            'NRMSE mean': rmse_mean
         })
 
     truth_values = y_test.join(
@@ -307,7 +311,7 @@ pivot_df.reset_index(inplace=True)
 
 
 models = pivot_df['Model']
-metrics = ['R^2', 'MAE', 'RMSE', 'MBE']
+metrics = ['R^2', 'MAE', 'RMSE', 'MBE', 'NRMSE range', 'NRMSE mean']
 
 bar_width = 0.3
 

@@ -276,5 +276,18 @@ def mean_bias_error(actual, predicted):
     return mbe
 
 
+def calculate_nrmse(rmse, y_true, method='range'):
+    if method == 'range':
+        y_min = np.min(y_true)
+        y_max = np.max(y_true)
+        nrmse = rmse / (y_max - y_min)
+    elif method == 'mean':
+        y_mean = np.mean(y_true)
+        nrmse = rmse / y_mean
+    else:
+        raise ValueError("Method must be 'range' or 'mean'")
+    return nrmse
+
+
 def adjusted_r_squared(r_squared, n, k):
     return 1 - ((1 - r_squared) * (n - 1) / (n - k - 1))
