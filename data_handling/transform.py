@@ -76,6 +76,7 @@ class ModelType(Enum):
     RNN = 'RNN'
     NBEATS = 'NBEATS'
     GRU = 'GRU'
+    ESN = 'ESN'
 
 
 class EarlyStopping:

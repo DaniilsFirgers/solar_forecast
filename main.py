@@ -15,17 +15,17 @@ from data_handling.transform import EarlyStopping, ModelType, PlotLoss, PlotPred
 from sklearn.linear_model import LinearRegression
 from typing import List
 from statsmodels.stats.stattools import durbin_watson
-from models.main import GRU, LSTM, RNN
+from models.main import ESN, GRU, LSTM, RNN
 import joblib
 
 plt.style.use('ggplot')
 matplotlib.use('tkagg')
 TRAIN_SPLIT = 0.70
-VALIDATION_SPLIT = 0.15
-TEST_SPLIT = 0.15
+VALIDATION_SPLIT = 0.20
+TEST_SPLIT = 0.10
 OBJECTS = ['A', 'B']
 NUM_EPOCHS = 5000
-NN_NEED_TRAINING = True
+NN_NEED_TRAINING = False
 LR_NEED_TRAINING = False
 
 
@@ -43,8 +43,10 @@ MODELS: List[ModelWrapper] = [
                                                        'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "lstm", "hidden_layers": {"A": 128, "B": 128, "C": 64}, "layers": {"A": 3, "B": 2, "C": 2}, "dropout": 0.0, "negative_slope": {"A": 1e-6, "B": 1e-4, "C": 1e-6}, "patience": {"A": 100, "B": 120, "C": 175}, "plot_color": "magenta"},
     {"name": "RNN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
                                                       'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "rnn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.0, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}, "plot_color": "yellow"},
-    # {"name": "Gradient Boosting", "model": GradientBoostingRegressor(n_estimators=750, learning_rate=0.01, alpha=0.9, n_iter_no_change=25), "input_features": ['shortwave_radiation', 'direct_radiation',
-    #                                                                                                                                                            'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gb", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "cyan"}
+    {"name": "Gradient Boosting", "model": GradientBoostingRegressor(n_estimators=750, learning_rate=0.01, alpha=0.9, n_iter_no_change=25), "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                                                                                                                               'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "gb", "hidden_layers": None, "layers": None, "dropout": None, "plot_color": "cyan"},
+    {"name": "ESN", "model": None, "input_features": ['shortwave_radiation', 'direct_radiation',
+                                                      'relative_humidity', 'temperature', 'pressure', 'hour'], "short_name": "esn", "hidden_layers": {"A": 64, "B": 128, "C": 128}, "layers": {"A": 3, "B": 3, "C": 2}, "dropout": 0.0, "negative_slope": {"A": 1e-6, "B": 1e-6, "C": 1e-7}, "patience": {"A": 150, "B": 150, "C": 175}, "plot_color": "pink"},
 ]
 
 for object in OBJECTS:
@@ -142,7 +144,7 @@ for object in OBJECTS:
 
             ground_truth = y_test
 
-        elif model["short_name"] == "lstm" or model["short_name"] == "rnn" or model["short_name"] == "gru":
+        elif model["short_name"] == "lstm" or model["short_name"] == "rnn" or model["short_name"] == "gru" or model["short_name"] == "esn":
             loss_plot_title = f'{model["name"]} modeļa apmācības un validācijas zaudējumi {object} objektam'
             loss_save_path = f'plots/{model["name"]}-{object}-loss.png'
 
@@ -178,6 +180,9 @@ for object in OBJECTS:
             elif model["short_name"] == "gru":
                 nn_model = GRU(input_dim=X_train_tensor.shape[1], hidden_dim=hidden_layers,
                                num_layers=layers, output_dim=1, droupout=dropout, negative_slope=negative_slope)
+            elif model["short_name"] == "esn":
+                nn_model = ESN(
+                    input_size=X_train_tensor.shape[1], output_size=1, reservoir_size=1000, negative_slope=negative_slope)
 
             criterion = nn.SmoothL1Loss()
             optimizer = torch.optim.Adam(
@@ -189,6 +194,8 @@ for object in OBJECTS:
                 model_type = ModelType.RNN
             elif model["short_name"] == "gru":
                 model_type = ModelType.GRU
+            elif model["short_name"] == "esn":
+                model_type = ModelType.ESN
 
             early_stopping = EarlyStopping(
                 object_name=object, patience=patience, min_delta=0.001, model_type=model_type)
@@ -257,6 +264,8 @@ for object in OBJECTS:
 
                 predictions = test_outputs
                 ground_truth = y_val_original
+
+        print(predictions)
 
         predictions_df = pd.DataFrame(
             {'predictions': predictions.flatten()}, index=X_test.index)

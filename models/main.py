@@ -80,3 +80,22 @@ class GRU(nn.Module):
         out = self.fc(out[:, -1, :])
         out = F.leaky_relu(out, self.negative_slope)
         return out
+
+
+class ESN(nn.Module):
+    def __init__(self, input_size, reservoir_size, output_size, negative_slope):
+        super(ESN, self).__init__()
+        self.reservoir_size = reservoir_size
+        self.negative_slope = negative_slope
+        self.W_in = nn.Linear(input_size, reservoir_size)
+        self.W_res = nn.Linear(reservoir_size, reservoir_size)
+        self.W_out = nn.Linear(reservoir_size, output_size)
+
+    def forward(self, input):
+        reservoir = torch.zeros((input.size(0), self.reservoir_size))
+        for i in range(input.size(1)):
+            input_t = input[:, i, :]
+            reservoir = torch.tanh(self.W_in(input_t) + self.W_res(reservoir))
+        output = self.W_out(reservoir)
+        output = F.leaky_relu(output, self.negative_slope)
+        return output
